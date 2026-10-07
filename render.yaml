@@ -18,7 +18,7 @@ services:
       - key: GATEWAY_KEY
         sync: false
       - key: GATEWAY_URL
-        value: https://set-by-notebook-heartbeat.invalid
+        value: https://ladder-rss-warehouse-heel.trycloudflare.com
       - key: DEMO_VIDEO_URL
         value: ""
       - key: DB_PATH
