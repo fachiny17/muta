@@ -1,4 +1,4 @@
-# ClassVoice NG: Complete Web Guide (learn as you build, laptop to live link)
+# Muta: Complete Web Guide (learn as you build, laptop to live link)
 
 How to use this guide: do the steps in order. Every part has **Why** (the idea you are learning), **Do** (commands), and **Check** (how you know it worked). Parts marked **Learn** are short code tours with exercises. Do not skip the checks; they are how you find problems early.
 
@@ -36,7 +36,7 @@ Vocabulary you will use: **ASR** (speech-to-text), **LLM** (the language model t
 **Why:** a *virtual environment* keeps this project's Python packages separate from everything else on your computer. A `.env` file keeps secrets out of your code.
 
 **Do:**
-1. Unzip `classvoice-ng.zip`. In VS Code: File → Open Folder → the `classvoice` folder.
+1. Unzip `muta.zip`. In VS Code: File → Open Folder → the `muta` folder.
 2. Open the terminal (`` Ctrl+` ``) and run:
    ```bash
    python3 -m venv venv
@@ -152,7 +152,7 @@ You have already done this once; here is the repeatable routine. Full details: `
 
 **Do (easiest way, in VS Code):**
 1. Check `.gitignore` is present. Then in the terminal: `git init && git add . && git status`. Confirm `.env` and `venv/` are **not** listed. If `.env` appears, stop and fix `.gitignore` first.
-2. `git commit -m "ClassVoice NG web version"` (if git asks who you are: `git config --global user.name "Your Name"` and `git config --global user.email "you@example.com"`).
+2. `git commit -m "Muta web version"` (if git asks who you are: `git config --global user.name "Your Name"` and `git config --global user.email "you@example.com"`).
 3. Create a GitHub account if needed. In VS Code open the Source Control panel → **Publish Branch** → choose **private repository**. VS Code handles the login for you.
 
 **Check:** on github.com your repo shows `app/`, `templates/`, `render.yaml`, and **no** `.env`.
@@ -167,16 +167,16 @@ You have already done this once; here is the repeatable routine. Full details: `
 
 **Do:**
 1. render.com → sign up with GitHub.
-2. **New → Blueprint** → select your repo. Render reads `render.yaml` and proposes a free web service named `classvoice-ng`.
+2. **New → Blueprint** → select your repo. Render reads `render.yaml` and proposes a free web service named `muta`.
 3. It asks for `GATEWAY_KEY`: enter the **same** secret you put in Colab. Click **Apply**.
-4. Wait for the build log to end with "Your service is live". Your link looks like `https://classvoice-ng.onrender.com`.
+4. Wait for the build log to end with "Your service is live". Your link looks like `https://muta.onrender.com`.
 5. In the service's **Environment** tab, reveal and copy `ADMIN_KEY` and `DASHBOARD_KEY`.
 6. In Colab Secrets add `APP_URL` (your Render link, no trailing slash) and `ADMIN_KEY` (copied value). Re-run the gateway cell. You should see `Heartbeat started`.
 
 **Check:**
 ```bash
-python -m scripts.smoke_test https://classvoice-ng.onrender.com
-python -m scripts.smoke_test https://classvoice-ng.onrender.com clip.wav ha     # full pipeline with real N-ATLAS
+python -m scripts.smoke_test https://muta.onrender.com
+python -m scripts.smoke_test https://muta.onrender.com clip.wav ha     # full pipeline with real N-ATLAS
 ```
 The first request may take about a minute (waking up). Then open the link on your phone: the chip should say **N-ATLAS online**; ask a question.
 
@@ -201,7 +201,7 @@ Share that link with students. If you restart Colab, update `GATEWAY_URL` in `.e
 1. Get a teacher's agreement for one class (voluntary, no names or numbers collected). For students under 18 follow the school's rules and get approval.
 2. Day 1 session (20 min, in person if possible): students open the link on their phones, agree to the notice, pick their language, ask one practice question.
 3. Daily: each student asks 3 or more real homework questions. Example card (translate it with a native speaker):
-   > ClassVoice NG: ask your school questions by voice. 1) Open the link. 2) Tap "I understand and agree". 3) Choose your language. 4) Tap the microphone, ask ONE question, tap again. 5) Rate the answer 1 to 5 and say whether it helped.
+   > Muta: ask your school questions by voice. 1) Open the link. 2) Tap "I understand and agree". 3) Choose your language. 4) Tap the microphone, ask ONE question, tap again. 5) Rate the answer 1 to 5 and say whether it helped.
 4. Every evening (5 minutes): open `/dashboard?key=...`. Check failures, read the `error` column (`sqlite3 data/sauti.db "select error,count(*) from interactions group by 1"`), fix real bugs, back up: `cp data/sauti.db backup-$(date +%F).db`.
 5. Before each session: confirm Colab is running, run `python -m scripts.test_gateway clip.wav ha`.
 

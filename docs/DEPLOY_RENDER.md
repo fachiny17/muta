@@ -16,10 +16,10 @@ So "one link that never crashes" is true for the app, not for the GPU. This guid
 
 ## Step 1. Put the code on GitHub
 ```bash
-cd classvoice
-git init && git add . && git commit -m "ClassVoice NG"
+cd muta
+git init && git add . && git commit -m "Muta"
 # create an empty PRIVATE repo on github.com, then:
-git remote add origin https://github.com/<you>/classvoice-ng.git
+git remote add origin https://github.com/<you>/muta.git
 git branch -M main && git push -u origin main
 ```
 Before pushing run `git status` and confirm `.env` and `data/*.db` are NOT listed (the `.gitignore` excludes them).
