@@ -1,8 +1,7 @@
 # Render Blueprint, FREE plan (no card). Data on this plan is NOT persistent (see docs/FREE_HOSTING.md):
-# use this deployment as the judge-facing demo; collect the real pilot data on a machine with a persistent disk.
 services:
   - type: web
-    name: classvoice-ng
+    name: muta
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
