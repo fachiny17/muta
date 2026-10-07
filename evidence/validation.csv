@@ -1,0 +1,6 @@
+id,timestamp_utc,user_id,language,input_channel,mode,audio_duration,audio_bytes,asr_success,llm_success,asr_ms,llm_ms,latency_ms,rating,task_completed,error
+1,2026-10-07T11:30:41+00:00,USR_F72BE102,en,web,question,,10703,0,,,,5370,,,asr: gateway unreachable or failed: [Errno -2] Name or service not known
+2,2026-10-07T11:31:10+00:00,USR_F72BE102,en,web,question,,14162,0,,,,4971,,,asr: gateway unreachable or failed: [Errno -2] Name or service not known
+3,2026-10-07T11:43:52+00:00,USR_F72BE102,en,web,question,8.88,25164,1,1,52809,6107,59030,,,
+4,2026-10-07T11:44:27+00:00,USR_F72BE102,en,web,question,3.6,10659,1,1,2348,5381,7857,,,
+5,2026-10-07T11:48:24+00:00,USR_F72BE102,ig,web,question,4.8,13761,1,1,81932,14119,96104,,,
