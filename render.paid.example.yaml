@@ -1,0 +1,41 @@
+# Render Blueprint. Deploy with: Render dashboard -> New -> Blueprint -> pick this repo.
+# The Starter plan + disk keeps the app awake and keeps the SQLite database across restarts.
+services:
+  - type: web
+    name: classvoice-ng
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    disk:
+      name: classvoice-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DB_PATH
+        value: /var/data/sauti.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: DASHBOARD_KEY
+        sync: false
+      - key: GATEWAY_KEY
+        sync: false
+      - key: GATEWAY_URL
+        value: https://set-by-notebook-heartbeat.invalid
+      - key: DEMO_VIDEO_URL
+        sync: false
+      - key: WHATSAPP_ENABLED
+        value: "0"
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false

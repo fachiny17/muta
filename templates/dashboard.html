@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muta - Validation Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nexlearn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="container">
+<header class="header">
+  <div><span class="logo-text">Muta</span><p class="subtitle">Validation Dashboard (live values from SQLite)</p></div>
+  <button class="icon-btn" id="theme-toggle" title="Toggle theme" type="button">&#9680;</button>
+</header>
+<main class="main-content stack">
+  {% macro pct(v) %}{% if v is none %}n/a{% else %}{{ v }}%{% endif %}{% endmacro %}
+  {% macro num(v, unit='') %}{% if v is none %}n/a{% else %}{{ v }}{{ unit }}{% endif %}{% endmacro %}
+  <div class="grid">
+    <div class="metric"><b>{{ s.participants }}</b><span>Participants (anonymous IDs)</span></div>
+    <div class="metric"><b>{{ s.total_interactions }}</b><span>Interactions</span></div>
+    <div class="metric"><b>{{ pct(s.asr_success_rate) }}</b><span>ASR success</span></div>
+    <div class="metric"><b>{{ pct(s.llm_success_rate) }}</b><span>LLM success</span></div>
+    <div class="metric"><b>{{ num(s.avg_rating, '/5') }}</b><span>Average rating ({{ s.rated_count }} rated)</span></div>
+    <div class="metric"><b>{{ pct(s.task_completion_rate) }}</b><span>Task completion ({{ s.task_answered_count }} answered)</span></div>
+    <div class="metric"><b>{{ num(s.avg_latency_ms, ' ms') }}</b><span>Avg latency (median {{ num(s.median_latency_ms, ' ms') }})</span></div>
+    <div class="metric"><b>{{ s.failed }}</b><span>Failed interactions</span></div>
+    <div class="metric"><b>{{ num(s.avg_asr_ms, ' ms') }}</b><span>Avg ASR time</span></div>
+    <div class="metric"><b>{{ num(s.avg_llm_ms, ' ms') }}</b><span>Avg LLM time</span></div>
+    <div class="metric"><b>{{ num(s.avg_audio_kb, ' KB') }}</b><span>Avg audio upload size</span></div>
+  </div>
+
+  <div class="card"><h2>Language distribution</h2>
+    <table>{% for code, name in langs.items() %}{% set n = s.by_language.get(code, 0) %}
+      <tr><td style="width:35%">{{ name }}</td><td style="width:15%">{{ n }}</td>
+      <td><div class="bar-fill" style="width:{{ (100*n/s.total_interactions) if s.total_interactions else 0 }}%"></div></td></tr>
+    {% endfor %}</table></div>
+
+  <div class="card"><h2>Channel distribution</h2>
+    <table>{% for ch in ['web', 'whatsapp'] %}{% set n = s.by_channel.get(ch, 0) %}
+      <tr><td style="width:35%">{{ ch|capitalize }}</td><td style="width:15%">{{ n }}</td>
+      <td><div class="bar-fill" style="width:{{ (100*n/s.total_interactions) if s.total_interactions else 0 }}%"></div></td></tr>
+    {% endfor %}</table></div>
+
+  <div class="card"><h2>Export</h2>
+    <p><a href="/export.csv?key={{ key }}">Anonymized CSV (metrics only)</a> &middot;
+       <span class="hint">Question/answer text export is restricted to the admin key.</span></p>
+    <p class="hint">"n/a" means no data yet. Nothing on this page is estimated or pre-filled.</p></div>
+</main>
+</div>
+<script>document.getElementById("theme-toggle").onclick = () => document.body.classList.toggle("light-theme");</script>
+</body>
+</html>

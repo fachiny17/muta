@@ -1,0 +1,11 @@
+.env
+venv/
+__pycache__/
+*.pyc
+data/*.db
+data/*.wav
+eval/clips/*
+!eval/clips/.gitkeep
+eval/report.*
+tests/frontend/node_modules/
+tests/frontend/package-lock.json

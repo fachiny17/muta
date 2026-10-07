@@ -1,0 +1,29 @@
+# Render Blueprint, FREE plan (no card). Data on this plan is NOT persistent (see docs/FREE_HOSTING.md):
+# use this deployment as the judge-facing demo; collect the real pilot data on a machine with a persistent disk.
+services:
+  - type: web
+    name: classvoice-ng
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: DASHBOARD_KEY
+        generateValue: true
+      - key: GATEWAY_KEY
+        sync: false
+      - key: GATEWAY_URL
+        value: https://set-by-notebook-heartbeat.invalid
+      - key: DEMO_VIDEO_URL
+        value: ""
+      - key: DB_PATH
+        value: /tmp/sauti.db
+      - key: WHATSAPP_ENABLED
+        value: "0"

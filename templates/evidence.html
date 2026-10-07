@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muta - Pilot Evidence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nexlearn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="container">
+<header class="header"><div><span class="logo-text">Muta</span><p class="subtitle">Pilot evidence (snapshot from the real pilot run)</p></div>
+  <a href="/">Back to the app</a></header>
+<main class="main-content stack">
+  {% if report %}
+  <div class="card"><pre style="white-space:pre-wrap; font-family:inherit; line-height:1.6;">{{ report }}</pre></div>
+  {% if has_csv %}<div class="card"><a href="/evidence/validation.csv">Download anonymized interaction metrics (CSV)</a>
+    <p class="hint">Metrics only: anonymous IDs, language, channel, timings, ratings. No names, phone numbers or question text.</p></div>{% endif %}
+  {% else %}
+  <div class="card"><p>The pilot evidence will be published here after the pilot run.</p></div>
+  {% endif %}
+</main>
+</div>
+</body>
+</html>
