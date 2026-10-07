@@ -1,4 +1,3 @@
-# Render Blueprint, FREE plan (no card). Data on this plan is NOT persistent (see docs/FREE_HOSTING.md):
 services:
   - type: web
     name: muta
