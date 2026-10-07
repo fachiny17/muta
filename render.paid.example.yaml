@@ -2,7 +2,7 @@
 # The Starter plan + disk keeps the app awake and keeps the SQLite database across restarts.
 services:
   - type: web
-    name: classvoice-ng
+    name: muta
     runtime: python
     plan: starter
     buildCommand: pip install -r requirements.txt
