@@ -19,7 +19,7 @@ from flask import Blueprint, Response, current_app, request
 
 from app import db, pipeline
 
-log = logging.getLogger("classvoice.whatsapp")
+log = logging.getLogger("muta.whatsapp")
 bp = Blueprint("whatsapp", __name__)
 
 RUN_ASYNC = True                      # tests set this to False to run inline
@@ -35,7 +35,7 @@ def _menu(cfg) -> dict:
 
 def welcome_text(cfg) -> str:
     lines = "\n".join(f"{n} {cfg['LANG_OPTIONS'][c]}" for n, c in _menu(cfg).items())
-    return ("Welcome to ClassVoice NG, a voice study assistant (an AI, not a human teacher). "
+    return ("Welcome to Muta, a voice study assistant (an AI, not a human teacher). "
             "We store only an anonymous ID, your language, your question text and your ratings, "
             "never your name or phone number. Choosing a language means you agree.\n"
             f"Reply with a number:\n{lines}")

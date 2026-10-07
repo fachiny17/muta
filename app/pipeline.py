@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from app import audio, db, natlas_client, prompts
 from app.natlas_client import GatewayError
 
-log = logging.getLogger("classvoice")
+log = logging.getLogger("muta")
 SETTINGS = {"max_audio_s": 90, "max_summary_audio_s": 180}
 
 MSG_AUDIO = "Sorry, I could not read that recording. Please try recording again."

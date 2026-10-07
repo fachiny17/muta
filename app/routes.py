@@ -74,7 +74,7 @@ def backup():
     with dst:
         src.backup(dst)
     src.close(); dst.close()
-    resp = send_file(tmp.name, as_attachment=True, download_name="classvoice-backup.sqlite")
+    resp = send_file(tmp.name, as_attachment=True, download_name="muta-backup.sqlite")
     resp.call_on_close(lambda: os.path.exists(tmp.name) and os.remove(tmp.name))
     return resp
 
@@ -167,7 +167,7 @@ def export_csv():
         abort(403)
     body = db.export_csv(include_text=include_text)
     return Response(body, mimetype="text/csv",
-                    headers={"Content-Disposition": "attachment; filename=classvoice_validation.csv"})
+                    headers={"Content-Disposition": "attachment; filename=muta_validation.csv"})
 
 
 @bp.get("/evidence")
@@ -183,4 +183,4 @@ def evidence_csv():
     p = EVIDENCE_DIR / "validation.csv"
     if not p.exists():
         abort(404)
-    return send_file(str(p), mimetype="text/csv", as_attachment=True, download_name="classvoice_validation.csv")
+    return send_file(str(p), mimetype="text/csv", as_attachment=True, download_name="muta_validation.csv")

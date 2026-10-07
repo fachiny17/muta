@@ -21,7 +21,7 @@ def f(v, unit=""):
 n, users = s["total_interactions"], s["participants"]
 ok_n = round(n * (s["llm_success_rate"] or 0) / 100) if n else 0
 lines = [
-    "# ClassVoice NG: Validation Report",
+    "# Muta: Validation Report",
     f"Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} from the application database.",
     "",
     "## PS2 evidence",

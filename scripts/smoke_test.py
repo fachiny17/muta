@@ -26,7 +26,7 @@ def main():
         r = c.get("/healthz")  # on Render Free the first call can take about a minute (cold start)
         check("healthz", r.status_code == 200, f"{r.status_code}, {int((time.time()-t)*1000)} ms")
         r = c.get("/")
-        check("home page loads", r.status_code == 200 and "ClassVoice" in r.text)
+        check("home page loads", r.status_code == 200 and "Muta" in r.text)
         r = c.get("/static/js/tutor.js")
         check("static files are served", r.status_code == 200)
         g = c.get("/health").json().get("gateway", {})
