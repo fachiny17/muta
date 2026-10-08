@@ -1,4 +1,5 @@
 import io
+import pytest
 from tests.conftest import make_wav
 
 
@@ -41,7 +42,8 @@ def test_feedback_rejects_bad_input_and_other_users(client, app, wav):
 
 def test_dashboard_and_export_are_protected_and_anonymous(client, wav):
     ask(client, wav)
-    assert client.get("/dashboard").status_code == 403
+    r = client.get("/dashboard")
+    assert r.status_code == 302 and r.headers["Location"].endswith("/login")   # browsers are sent to the login page
     assert client.get("/export.csv").status_code == 403
     page = client.get("/dashboard?key=k")
     assert page.status_code == 200 and b"Participants" in page.data
@@ -112,3 +114,56 @@ def test_evidence_page_placeholder_and_snapshot(client, monkeypatch, tmp_path):
     page = client.get("/evidence").get_data(as_text=True)
     assert "Documented interactions: 7" in page and "validation.csv" in page
     assert client.get("/evidence/validation.csv").status_code == 200
+
+
+@pytest.fixture(autouse=True)
+def _isolate_tests(tmp_path, monkeypatch):
+    """Runs before EVERY test in this file, so results never depend on your own project's state."""
+    from app import routes
+    routes._login_attempts.clear()                        # the failed-login counter starts empty each time
+    empty = tmp_path / "no_evidence"
+    empty.mkdir()
+    monkeypatch.setattr(routes, "EVIDENCE_DIR", empty)    # ignore any real evidence/ folder in your project
+
+
+def test_team_login_flow(client, wav):
+    ask(client, wav)
+    assert client.get("/login").status_code == 200
+    assert client.post("/login", data={"password": "wrong"}).status_code == 401
+    r = client.post("/login", data={"password": "k"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/dashboard")
+    page = client.get("/dashboard")                       # no ?key= needed any more: the session cookie is enough
+    assert page.status_code == 200 and b"Log out" in page.data and b"Home" in page.data
+    assert client.get("/api/stats").status_code == 200
+    assert client.get("/export.csv?include_text=1").status_code == 200     # text export is allowed for a logged-in team member
+    assert client.get("/admin/backup.sqlite").status_code == 200
+    client.post("/logout")
+    assert client.get("/dashboard").status_code == 302                    # logged out again
+
+
+def test_login_is_rate_limited(client):
+    for _ in range(5):
+        assert client.post("/login", data={"password": "nope"}).status_code == 401
+    assert client.post("/login", data={"password": "k"}).status_code == 429   # even the right password waits
+
+
+def test_students_cannot_reach_team_pages(client):
+    assert client.get("/api/stats").status_code == 403
+    assert client.get("/admin/backup.sqlite").status_code == 404
+    assert client.get("/export.csv").status_code == 403
+
+
+def test_homepage_links_and_evidence_link_visibility(client, monkeypatch, tmp_path):
+    from app import routes
+    home = client.get("/").get_data(as_text=True)
+    assert "Team login" in home and "Pilot evidence" not in home          # hidden until evidence exists
+    (tmp_path / "VALIDATION_REPORT.md").write_text("# r")
+    monkeypatch.setattr(routes, "EVIDENCE_DIR", tmp_path)
+    assert "Pilot evidence" in client.get("/").get_data(as_text=True)
+    client.post("/login", data={"password": "k"})
+    assert ">Dashboard<" in client.get("/").get_data(as_text=True)
+
+
+def test_survey_markup_present(client):
+    html = client.get("/").get_data(as_text=True)
+    assert "Survey successfully saved! Thank you." in html and 'id="fb-done"' in html
