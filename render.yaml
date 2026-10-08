@@ -18,7 +18,7 @@ services:
       - key: GATEWAY_KEY
         sync: false
       - key: GATEWAY_URL
-        value: https://patch-institutional-attachment-very.trycloudflare.com
+        value: https://your-tunnel.trycloudflare.com
       - key: DEMO_VIDEO_URL
         value: ""
       - key: DB_PATH
