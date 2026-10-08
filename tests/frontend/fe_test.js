@@ -63,10 +63,12 @@ const ok = (n, c) => { console.log((c ? "PASS  " : "FAIL  ") + n); if (!c) fails
   ok("answer rendered", d.getElementById("answer").textContent.includes("Stress is force"));
   ok("feedback card visible", d.getElementById("fb").hidden === false);
 
-  d.querySelector('#stars button[data-r="4"]').click(); await wait(400);
-  d.querySelector('#task button[data-t="1"]').click(); await wait(400);
-  ok("feedback thank-you shown", d.getElementById("fbmsg").textContent.includes("Thank you"));
-  ok("rating button highlighted", d.querySelector('#stars button[data-r="4"]').classList.contains("sel"));
+  d.querySelector('#stars button[data-r="4"]').click(); await wait(200);
+  ok("after rating only, the survey is still there with a 'rating only' option", d.getElementById("fb").hidden === false && d.getElementById("fb-submit").hidden === false);
+  d.querySelector('#task button[data-t="1"]').click(); await wait(500);
+  ok("survey questions disappear after both answers", d.getElementById("fb").hidden === true);
+  ok("success message is displayed", d.getElementById("fb-done").hidden === false && d.getElementById("fb-done").textContent.includes("Survey successfully saved! Thank you."));
+  ok("toast notification shown", d.getElementById("toast-root").textContent.includes("Survey successfully saved"));
 
   const s = await (await nfetch("/api/stats?key=" + (process.env.DASHBOARD_KEY || "k"))).json();
   ok("database recorded rating 4 and task completed for yo", s.by_language.yo === 1 && s.avg_rating >= 4 && s.task_completion_rate === 100);
