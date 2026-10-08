@@ -1,13 +1,3 @@
-"""N-ATLAS gateway: runs the REAL N-ATLAS models on a GPU host (e.g. Kaggle).
-
-Endpoints: GET /health, POST /v1/asr (wav + lang), POST /v1/chat (messages).
-Secrets come from environment variables or Kaggle Secrets, never from the source:
-  HF_TOKEN     Hugging Face read token (the LLM repo is gated)
-  GATEWAY_KEY  shared secret the Flask app sends in the x-api-key header
-
-Colab / Kaggle usage (after pip installing the requirements and uploading this file):
-    import gateway; gateway.start_in_notebook()   # loads models, starts the server, prints the public URL
-"""
 import collections
 import io
 import os
