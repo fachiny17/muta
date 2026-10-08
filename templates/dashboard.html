@@ -10,12 +10,27 @@
 <body>
 <div class="container">
 <header class="header">
-  <div><span class="logo-text">Muta</span><p class="subtitle">Validation Dashboard (live values from SQLite)</p></div>
-  <button class="icon-btn" id="theme-toggle" title="Toggle theme" type="button">&#9680;</button>
+  <div><span class="logo-text">MUTA</span><p class="subtitle">Validation Dashboard (live values from the database)</p></div>
+  <nav class="nav">
+    <a class="nav-link" href="{{ url_for('web.index') }}">Home</a>
+    <a class="nav-link" href="{{ url_for('web.evidence') }}">Evidence</a>
+    {% if is_admin %}
+    <form method="post" action="{{ url_for('web.logout') }}" style="display:inline">
+      <button class="nav-link nav-btn" type="submit">Log out</button>
+    </form>
+    {% endif %}
+    <button class="icon-btn" id="theme-toggle" title="Toggle theme" type="button">&#9680;</button>
+  </nav>
 </header>
 <main class="main-content stack">
   {% macro pct(v) %}{% if v is none %}n/a{% else %}{{ v }}%{% endif %}{% endmacro %}
   {% macro num(v, unit='') %}{% if v is none %}n/a{% else %}{{ v }}{{ unit }}{% endif %}{% endmacro %}
+
+  <div class="card">
+    <label class="hint"><input type="checkbox" id="auto"> Auto-refresh every 30 seconds</label>
+    <span class="hint" id="updated"></span>
+  </div>
+
   <div class="grid">
     <div class="metric"><b>{{ s.participants }}</b><span>Participants (anonymous IDs)</span></div>
     <div class="metric"><b>{{ s.total_interactions }}</b><span>Interactions</span></div>
@@ -42,12 +57,23 @@
       <td><div class="bar-fill" style="width:{{ (100*n/s.total_interactions) if s.total_interactions else 0 }}%"></div></td></tr>
     {% endfor %}</table></div>
 
-  <div class="card"><h2>Export</h2>
-    <p><a href="/export.csv?key={{ key }}">Anonymized CSV (metrics only)</a> &middot;
-       <span class="hint">Question/answer text export is restricted to the admin key.</span></p>
-    <p class="hint">"n/a" means no data yet. Nothing on this page is estimated or pre-filled.</p></div>
+  <div class="card"><h2>Export and backup</h2>
+    <p><a href="/export.csv{% if key %}?key={{ key }}{% endif %}">Anonymized CSV (metrics only)</a>
+    {% if is_admin %} &middot; <a href="/export.csv?include_text=1">CSV with question/answer text (team only)</a>
+    &middot; <a href="/admin/backup.sqlite">Download full database backup</a>{% endif %}</p>
+    <p class="hint">"n/a" means no data yet. Nothing on this page is estimated or pre-filled.
+    On the free Render plan this data is temporary: it is erased when the server restarts or sleeps, so download a backup regularly.</p></div>
 </main>
 </div>
-<script>document.getElementById("theme-toggle").onclick = () => document.body.classList.toggle("light-theme");</script>
+<script>
+  document.getElementById("theme-toggle").onclick = () => document.body.classList.toggle("light-theme");
+  const auto = document.getElementById("auto");
+  document.getElementById("updated").textContent = " Last loaded " + new Date().toLocaleTimeString();
+  auto.checked = sessionStorage.getItem("muta_auto") === "1";
+  let timer = null;
+  function arm() { clearInterval(timer); if (auto.checked) timer = setInterval(() => location.reload(), 30000); }
+  auto.onchange = () => { sessionStorage.setItem("muta_auto", auto.checked ? "1" : "0"); arm(); };
+  arm();
+</script>
 </body>
 </html>
