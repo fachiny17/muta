@@ -1,4 +1,3 @@
-/* ClassVoice NG additions on top of the NexLearn theme (nexlearn.css) */
 .container { max-width: 900px; }
 .main-title { font-size: 34px; }
 .audio-visualizer .bar { animation-play-state: paused; opacity: .35; }
@@ -32,3 +31,13 @@ table { width: 100%; border-collapse: collapse; }
 td { padding: 8px 4px; border-bottom: 1px solid var(--border-color); }
 .bar-fill { height: 8px; background: var(--accent-blue); border-radius: 4px; }
 a { color: var(--accent-cyan); }
+
+/* ---- navigation, login, survey ---- */
+.nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.nav-link { color: var(--text-primary); text-decoration: none; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border-color); font-size: .9rem; background: transparent; cursor: pointer; }
+.nav-link:hover { border-color: var(--accent-blue); }
+.nav-btn { font-family: inherit; }
+.card.success { border-color: rgba(0,255,136,.6); }
+.card.success h2 { color: var(--success); margin: 0; }
+.survey-q { margin: 14px 0 4px; font-weight: 600; }
