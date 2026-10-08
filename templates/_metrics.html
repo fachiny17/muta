@@ -1,0 +1,33 @@
+{# Shared by the team dashboard (live numbers) and the public Evidence page (frozen snapshot),
+   so both always use exactly the same labels, layout and definitions. #}
+{% macro pct(v) %}{% if v is none %}n/a{% else %}{{ v }}%{% endif %}{% endmacro %}
+{% macro num(v, unit='') %}{% if v is none %}n/a{% else %}{{ v }}{{ unit }}{% endif %}{% endmacro %}
+
+{% macro metrics(s, langs) %}
+<div class="grid">
+  <div class="metric"><b>{{ s.participants }}</b><span>Participants (anonymous IDs)</span></div>
+  <div class="metric"><b>{{ s.total_interactions }}</b><span>Interactions</span></div>
+  <div class="metric"><b>{{ pct(s.asr_success_rate) }}</b><span>ASR success</span></div>
+  <div class="metric"><b>{{ pct(s.llm_success_rate) }}</b><span>LLM success</span></div>
+  <div class="metric"><b>{{ num(s.avg_rating, '/5') }}</b><span>Average rating ({{ s.rated_count }} rated)</span></div>
+  <div class="metric"><b>{{ pct(s.task_completion_rate) }}</b><span>Task completion ({{ s.task_answered_count }} answered)</span></div>
+  <div class="metric"><b>{{ num(s.avg_latency_ms, ' ms') }}</b><span>Avg latency (median {{ num(s.median_latency_ms, ' ms') }})</span></div>
+  <div class="metric"><b>{{ s.failed }}</b><span>Failed interactions</span></div>
+  <div class="metric"><b>{{ num(s.avg_asr_ms, ' ms') }}</b><span>Avg ASR time</span></div>
+  <div class="metric"><b>{{ num(s.avg_llm_ms, ' ms') }}</b><span>Avg LLM time</span></div>
+  <div class="metric"><b>{{ num(s.avg_audio_kb, ' KB') }}</b><span>Avg audio upload size</span></div>
+</div>
+
+<div class="two-col">
+  <div class="card"><h2>Language distribution</h2>
+    <table>{% for code, name in langs.items() %}{% set n = s.by_language.get(code, 0) %}
+      <tr><td style="width:38%">{{ name }}</td><td style="width:14%">{{ n }}</td>
+      <td><div class="bar-fill" style="width:{{ (100*n/s.total_interactions) if s.total_interactions else 0 }}%"></div></td></tr>
+    {% endfor %}</table></div>
+  <div class="card"><h2>Channel distribution</h2>
+    <table>{% for ch in ['web', 'whatsapp'] %}{% set n = s.by_channel.get(ch, 0) %}
+      <tr><td style="width:38%">{{ ch|capitalize }}</td><td style="width:14%">{{ n }}</td>
+      <td><div class="bar-fill" style="width:{{ (100*n/s.total_interactions) if s.total_interactions else 0 }}%"></div></td></tr>
+    {% endfor %}</table></div>
+</div>
+{% endmacro %}
