@@ -9,8 +9,13 @@
 </head>
 <body>
 <div class="container">
-<header class="header"><div><span class="logo-text">Muta</span><p class="subtitle">Pilot evidence (snapshot from the real pilot run)</p></div>
-  <a href="/">Back to the app</a></header>
+<header class="header">
+  <div><span class="logo-text">MUTA</span><p class="subtitle">Pilot evidence (snapshot from the real pilot run)</p></div>
+  <nav class="nav">
+    <a class="nav-link" href="{{ url_for('web.index') }}">Home</a>
+    {% if is_admin %}<a class="nav-link" href="{{ url_for('web.dashboard') }}">Dashboard</a>{% endif %}
+  </nav>
+</header>
 <main class="main-content stack">
   {% if report %}
   <div class="card"><pre style="white-space:pre-wrap; font-family:inherit; line-height:1.6;">{{ report }}</pre></div>
