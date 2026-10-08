@@ -104,16 +104,40 @@ def test_ffmpeg_fallback_to_bundled_binary(monkeypatch, tmp_path):
     assert audio.duration_s(out) > 0.9
 
 
-def test_evidence_page_placeholder_and_snapshot(client, monkeypatch, tmp_path):
+def _publish_snapshot(folder):
+    """What scripts/publish_evidence.py does: freeze db.stats() into evidence/snapshot.json."""
+    import json
+    from app import db
+    (folder / "snapshot.json").write_text(json.dumps({"generated_at": "2026-10-10T12:00:00+00:00", "stats": db.stats(), "eval": None}))
+    (folder / "validation.csv").write_text("id\n1\n")
+
+
+def test_evidence_page_placeholder_and_snapshot(client, monkeypatch, tmp_path, wav):
     from app import routes
     assert b"will be published here" in client.get("/evidence").data
     assert client.get("/evidence/validation.csv").status_code == 404
-    (tmp_path / "VALIDATION_REPORT.md").write_text("# Report\n- Documented interactions: 7")
-    (tmp_path / "validation.csv").write_text("id\n1\n")
+    ask(client, wav)
+    _publish_snapshot(tmp_path)
     monkeypatch.setattr(routes, "EVIDENCE_DIR", tmp_path)
     page = client.get("/evidence").get_data(as_text=True)
-    assert "Documented interactions: 7" in page and "validation.csv" in page
+    assert "Results from a real pilot" in page and "Interactions" in page and "validation.csv" in page
+    assert "will be published here" not in page
     assert client.get("/evidence/validation.csv").status_code == 200
+
+
+def test_evidence_and_dashboard_numbers_correlate(client, monkeypatch, tmp_path, wav):
+    from app import routes
+    ask(client, wav); ask(client, wav)
+    _publish_snapshot(tmp_path)
+    monkeypatch.setattr(routes, "EVIDENCE_DIR", tmp_path)
+    client.post("/login", data={"password": "k"})
+    dash = client.get("/dashboard").get_data(as_text=True)
+    assert "match this snapshot exactly" in dash                      # same database, same moment -> identical
+    ask(client, wav)                                                  # new activity after the snapshot
+    dash = client.get("/dashboard").get_data(as_text=True)
+    assert "differ from it" in dash and "match this snapshot exactly" not in dash
+    evid = client.get("/evidence").get_data(as_text=True)
+    assert ">2<" in evid and ">3<" not in evid                        # the public page stays frozen at the snapshot
 
 
 @pytest.fixture(autouse=True)
@@ -122,7 +146,7 @@ def _isolate_tests(tmp_path, monkeypatch):
     from app import routes
     routes._login_attempts.clear()                        # the failed-login counter starts empty each time
     empty = tmp_path / "no_evidence"
-    empty.mkdir()
+    empty.mkdir(exist_ok=True)
     monkeypatch.setattr(routes, "EVIDENCE_DIR", empty)    # ignore any real evidence/ folder in your project
 
 
@@ -157,7 +181,7 @@ def test_homepage_links_and_evidence_link_visibility(client, monkeypatch, tmp_pa
     from app import routes
     home = client.get("/").get_data(as_text=True)
     assert "Team login" in home and "Pilot evidence" not in home          # hidden until evidence exists
-    (tmp_path / "VALIDATION_REPORT.md").write_text("# r")
+    _publish_snapshot(tmp_path)
     monkeypatch.setattr(routes, "EVIDENCE_DIR", tmp_path)
     assert "Pilot evidence" in client.get("/").get_data(as_text=True)
     client.post("/login", data={"password": "k"})
