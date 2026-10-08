@@ -8,23 +8,63 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+{% from "_metrics.html" import metrics, pct, num %}
 <div class="container">
 <header class="header">
-  <div><span class="logo-text">MUTA</span><p class="subtitle">Pilot evidence (snapshot from the real pilot run)</p></div>
+  <div><span class="logo-text">MUTA</span><p class="subtitle">Pilot results</p></div>
   <nav class="nav">
     <a class="nav-link" href="{{ url_for('web.index') }}">Home</a>
     {% if is_admin %}<a class="nav-link" href="{{ url_for('web.dashboard') }}">Dashboard</a>{% endif %}
+    <button class="icon-btn" id="theme-toggle" title="Toggle theme" type="button">&#9680;</button>
   </nav>
 </header>
 <main class="main-content stack">
-  {% if report %}
-  <div class="card"><pre style="white-space:pre-wrap; font-family:inherit; line-height:1.6;">{{ report }}</pre></div>
-  {% if has_csv %}<div class="card"><a href="/evidence/validation.csv">Download anonymized interaction metrics (CSV)</a>
-    <p class="hint">Metrics only: anonymous IDs, language, channel, timings, ratings. No names, phone numbers or question text.</p></div>{% endif %}
+  {% if snap %}
+  {% set s = snap.stats %}
+  <div class="card banner">
+    <h2>Results from a real pilot with students</h2>
+    <p>Snapshot taken {{ snap.generated_at[:16]|replace('T', ' ') }} UTC. Every number below comes from the interactions recorded by the
+       Muta system itself (nothing is typed in by hand), computed by the same code as the team dashboard.</p>
+    <p class="hint">{{ s.total_interactions }} interactions from {{ s.participants }} anonymous participants.
+       {% if s.total_interactions >= 50 %}This meets the 50+ interaction requirement.{% else %}This is below the 50 interaction target.{% endif %}</p>
+  </div>
+
+  {{ metrics(s, langs) }}
+
+  <div class="card">
+    <h2>Speech recognition accuracy (word error rate)</h2>
+    {% if snap.eval and snap.eval.clips %}
+    <p class="hint">Measured on {{ snap.eval.clips }} short clips with human-verified reference transcripts. Lower is better.</p>
+    <table>
+      <tr><td><b>Language</b></td><td><b>Clips</b></td><td><b>WER</b></td><td><b>Avg ASR time</b></td></tr>
+      {% for code, v in snap.eval.by_language.items() %}
+      <tr><td>{{ langs.get(code, code) }}</td><td>{{ v.clips }}</td><td>{{ (v.wer * 100)|round(1) }}%</td><td>{{ v.avg_asr_ms }} ms</td></tr>
+      {% endfor %}
+      <tr><td><b>Overall</b></td><td><b>{{ snap.eval.clips }}</b></td><td><b>{% if snap.eval.overall_wer is not none %}{{ (snap.eval.overall_wer * 100)|round(1) }}%{% else %}n/a{% endif %}</b></td><td></td></tr>
+    </table>
+    {% else %}
+    <p class="hint">Not measured yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>How to read these numbers</h2>
+    <ul class="plain">
+      <li><b>ASR / LLM success</b> mean the speech-recognition and answer-generation steps ran without a technical failure. They do not measure whether an answer is correct; that is what the user ratings show.</li>
+      <li><b>Task completion</b> is the share of students who said the answer helped them finish their task.</li>
+      <li>Participants are anonymous IDs; no names, phone numbers or emails are collected, and recordings are deleted right after processing.</li>
+      <li>Sample sizes are small, so percentages should be read with caution.</li>
+    </ul>
+  </div>
+
+  {% if has_csv %}<div class="card"><a href="/evidence/validation.csv">Download the anonymized interaction metrics (CSV)</a>
+    <p class="hint">One row per interaction: anonymous ID, language, channel, timings, ratings. No names, phone numbers or question text.</p></div>{% endif %}
+
   {% else %}
-  <div class="card"><p>The pilot evidence will be published here after the pilot run.</p></div>
+  <div class="card"><h2>Pilot results</h2><p>The pilot results will be published here after the pilot run.</p></div>
   {% endif %}
 </main>
 </div>
+<script>document.getElementById("theme-toggle").onclick = () => document.body.classList.toggle("light-theme");</script>
 </body>
 </html>
