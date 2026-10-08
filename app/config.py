@@ -12,6 +12,12 @@ LANGS = {"en": "Nigerian English", "ha": "Hausa", "yo": "Yoruba", "ig": "Igbo"}
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-change-me")
+    # Team login session (the dashboard).
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = os.getenv("RENDER") == "true"
+    PERMANENT_SESSION_LIFETIME = 60 * 60 * 12   # stay logged in for 12 hours
+    
     GATEWAY_URL = os.getenv("GATEWAY_URL", "http://127.0.0.1:9000").rstrip("/")
     GATEWAY_KEY = os.getenv("GATEWAY_KEY", "")
     DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "data" / "sauti.db"))
