@@ -1,5 +1,6 @@
 """Web channel + team login + validation dashboard."""
 import hmac
+import json
 import os
 import sqlite3
 import tempfile
@@ -61,6 +62,17 @@ def _admin_allowed() -> bool:
     return bool(key) and _same(request.headers.get("x-admin-key", ""), key)
 
 
+def _load_snapshot():
+    """The frozen pilot results written by scripts/publish_evidence.py (None until you publish them)."""
+    p = EVIDENCE_DIR / "snapshot.json"
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 def _too_many_attempts(ip: str) -> bool:
     now = time.time()
     recent = [t for t in _login_attempts.get(ip, []) if now - t < WINDOW_S]
@@ -74,7 +86,7 @@ def index():
     return render_template("index.html", langs=current_app.config["LANG_OPTIONS"],
                            demo_url=current_app.config["DEMO_VIDEO_URL"],
                            is_admin=_is_admin(),
-                           has_evidence=(EVIDENCE_DIR / "VALIDATION_REPORT.md").exists())
+                           has_evidence=_load_snapshot() is not None)
 
 
 @bp.get("/healthz")
@@ -96,9 +108,8 @@ def health():
 
 @bp.get("/evidence")
 def evidence():
-    """Public, read-only snapshot of the pilot results (files committed to the repo, no live database needed)."""
-    p = EVIDENCE_DIR / "VALIDATION_REPORT.md"
-    return render_template("evidence.html", report=p.read_text(encoding="utf-8") if p.exists() else None,
+    """Public, read-only pilot results, drawn from the frozen snapshot committed to the repo (no live database needed)."""
+    return render_template("evidence.html", snap=_load_snapshot(), langs=current_app.config["LANG_OPTIONS"],
                            has_csv=(EVIDENCE_DIR / "validation.csv").exists(), is_admin=_is_admin())
 
 
@@ -196,8 +207,9 @@ def feedback():
 def dashboard():
     if not _dashboard_allowed():
         return redirect(url_for("web.login"))
-    return render_template("dashboard.html", s=db.stats(), langs=current_app.config["LANG_OPTIONS"],
-                           key=request.args.get("key", ""), is_admin=_is_admin())
+    live, snap = db.stats(), _load_snapshot()
+    return render_template("dashboard.html", s=live, snap=snap, in_sync=bool(snap) and snap.get("stats") == live,
+                           langs=current_app.config["LANG_OPTIONS"], key=request.args.get("key", ""), is_admin=_is_admin())
 
 
 @bp.get("/api/stats")
