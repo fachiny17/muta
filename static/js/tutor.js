@@ -1,11 +1,8 @@
-// Web channel for ClassVoice NG. Adapted from NexLearn: same MediaRecorder capture, recording timer,
-// visualizer, toast, theme toggle and client-side download helpers. The Socket.IO/Deepgram streaming is
-// replaced by one POST to /api/ask, which runs the N-ATLAS ASR -> LLM pipeline on the server.
-// No API keys exist in this file; the browser only talks to our Flask backend.
 (() => {
   const $ = (id) => document.getElementById(id);
   const MAX_S = { question: 60, summary: 180 };
   let recorder, stream, chunks = [], timer, interactionId = null, mime = "", mode = "question", lastTranscript = "", lastAnswer = "";
+  let rating = null, taskDone = null, submitting = false;   // survey state
 
   // ---- helpers carried over from NexLearn ----
   function toast(msg, type = "info") {
@@ -101,8 +98,7 @@
     $("transcription-text").textContent = lastTranscript || "(no transcript)";
     $("word-count").textContent = lastTranscript.split(/\s+/).filter(Boolean).length;
     $("answer-title").textContent = mode === "summary" ? "Lesson summary" : "Answer";
-    $("fbmsg").textContent = "";
-    document.querySelectorAll("#fb button").forEach(b => b.classList.remove("sel"));
+    resetSurvey();
     if (d.ok) {
       interactionId = d.interaction_id; lastAnswer = d.answer;
       $("answer").textContent = d.answer; $("fb").hidden = false;
@@ -114,18 +110,48 @@
     }
   }
 
-  // ---- feedback ----
-  async function feedback(payload, btn, group) {
-    if (!interactionId) return;
-    const r = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ interaction_id: interactionId, ...payload }) });
-    if (r.ok) {
-      document.querySelectorAll(group + " button").forEach(b => b.classList.remove("sel"));
-      btn.classList.add("sel"); $("fbmsg").textContent = "Thank you for your feedback.";
-    } else { toast("Could not save feedback.", "error"); }
+  // ---- survey: choose both answers -> saved once -> survey disappears -> thank-you message ----
+  function resetSurvey() {
+    rating = null; taskDone = null; submitting = false;
+    $("fbmsg").textContent = "";
+    $("fb-submit").hidden = true;
+    $("fb-done").hidden = true;
+    document.querySelectorAll("#fb button").forEach(b => b.classList.remove("sel"));
   }
-  document.querySelectorAll("#stars button").forEach(b => b.onclick = () => feedback({ rating: +b.dataset.r }, b, "#stars"));
-  document.querySelectorAll("#task button").forEach(b => b.onclick = () => feedback({ task_completed: b.dataset.t === "1" }, b, "#task"));
+
+  function mark(group, btn) {
+    document.querySelectorAll(group + " button").forEach(b => b.classList.toggle("sel", b === btn));
+  }
+
+  async function submitSurvey() {
+    if (!interactionId || submitting || rating === null) return;
+    submitting = true;
+    const payload = { interaction_id: interactionId, rating };
+    if (taskDone !== null) payload.task_completed = taskDone;
+    try {
+      const r = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload) });
+      if (!r.ok) throw new Error("save failed");
+      $("fb").hidden = true;            // the questions disappear
+      $("fb-done").hidden = false;      // permanent thank-you message
+      toast("Survey successfully saved! Thank you.", "success");
+      interactionId = null;             // this answer has now been rated
+    } catch (e) {
+      submitting = false;
+      toast("Could not save the survey. Please try again.", "error");
+    }
+  }
+
+  document.querySelectorAll("#stars button").forEach(b => b.onclick = () => {
+    rating = +b.dataset.r; mark("#stars", b);
+    if (taskDone !== null) submitSurvey();      // both answered -> save automatically
+    else $("fb-submit").hidden = false;         // otherwise offer "rating only"
+  });
+  document.querySelectorAll("#task button").forEach(b => b.onclick = () => {
+    taskDone = b.dataset.t === "1"; mark("#task", b);
+    if (rating !== null) submitSurvey();
+  });
+  $("fb-submit").onclick = submitSurvey;
 
   // ---- copy / download (from NexLearn) ----
   $("copy").onclick = () => navigator.clipboard.writeText(lastAnswer).then(() => toast("Copied.", "success"), () => toast("Copy failed.", "error"));
