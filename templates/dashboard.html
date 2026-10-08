@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+{% from "_metrics.html" import metrics %}
 <div class="container">
 <header class="header">
   <div><span class="logo-text">MUTA</span><p class="subtitle">Validation Dashboard (live values from the database)</p></div>
@@ -23,39 +24,23 @@
   </nav>
 </header>
 <main class="main-content stack">
-  {% macro pct(v) %}{% if v is none %}n/a{% else %}{{ v }}%{% endif %}{% endmacro %}
-  {% macro num(v, unit='') %}{% if v is none %}n/a{% else %}{{ v }}{{ unit }}{% endif %}{% endmacro %}
-
   <div class="card">
     <label class="hint"><input type="checkbox" id="auto"> Auto-refresh every 30 seconds</label>
     <span class="hint" id="updated"></span>
   </div>
 
-  <div class="grid">
-    <div class="metric"><b>{{ s.participants }}</b><span>Participants (anonymous IDs)</span></div>
-    <div class="metric"><b>{{ s.total_interactions }}</b><span>Interactions</span></div>
-    <div class="metric"><b>{{ pct(s.asr_success_rate) }}</b><span>ASR success</span></div>
-    <div class="metric"><b>{{ pct(s.llm_success_rate) }}</b><span>LLM success</span></div>
-    <div class="metric"><b>{{ num(s.avg_rating, '/5') }}</b><span>Average rating ({{ s.rated_count }} rated)</span></div>
-    <div class="metric"><b>{{ pct(s.task_completion_rate) }}</b><span>Task completion ({{ s.task_answered_count }} answered)</span></div>
-    <div class="metric"><b>{{ num(s.avg_latency_ms, ' ms') }}</b><span>Avg latency (median {{ num(s.median_latency_ms, ' ms') }})</span></div>
-    <div class="metric"><b>{{ s.failed }}</b><span>Failed interactions</span></div>
-    <div class="metric"><b>{{ num(s.avg_asr_ms, ' ms') }}</b><span>Avg ASR time</span></div>
-    <div class="metric"><b>{{ num(s.avg_llm_ms, ' ms') }}</b><span>Avg LLM time</span></div>
-    <div class="metric"><b>{{ num(s.avg_audio_kb, ' KB') }}</b><span>Avg audio upload size</span></div>
+  {% if snap %}
+  <div class="card {{ 'banner' if in_sync else '' }}">
+    <h2>Published pilot snapshot (the public Evidence page)</h2>
+    <p class="hint">Taken {{ snap.generated_at[:16]|replace('T', ' ') }} UTC: {{ snap.stats.total_interactions }} interactions,
+      {{ snap.stats.participants }} participants.
+      {% if in_sync %}<b>The live numbers below match this snapshot exactly.</b>
+      {% else %}The live numbers below differ from it: either new activity happened since, or this server keeps a different database from the one the snapshot came from (for example the free Render server, which only holds activity since its last restart).{% endif %}</p>
   </div>
+  {% endif %}
 
-  <div class="card"><h2>Language distribution</h2>
-    <table>{% for code, name in langs.items() %}{% set n = s.by_language.get(code, 0) %}
-      <tr><td style="width:35%">{{ name }}</td><td style="width:15%">{{ n }}</td>
-      <td><div class="bar-fill" style="width:{{ (100*n/s.total_interactions) if s.total_interactions else 0 }}%"></div></td></tr>
-    {% endfor %}</table></div>
-
-  <div class="card"><h2>Channel distribution</h2>
-    <table>{% for ch in ['web', 'whatsapp'] %}{% set n = s.by_channel.get(ch, 0) %}
-      <tr><td style="width:35%">{{ ch|capitalize }}</td><td style="width:15%">{{ n }}</td>
-      <td><div class="bar-fill" style="width:{{ (100*n/s.total_interactions) if s.total_interactions else 0 }}%"></div></td></tr>
-    {% endfor %}</table></div>
+  <h2 class="section-title">Live data on this server</h2>
+  {{ metrics(s, langs) }}
 
   <div class="card"><h2>Export and backup</h2>
     <p><a href="/export.csv{% if key %}?key={{ key }}{% endif %}">Anonymized CSV (metrics only)</a>
