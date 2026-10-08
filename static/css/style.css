@@ -41,3 +41,10 @@ a { color: var(--accent-cyan); }
 .card.success { border-color: rgba(0,255,136,.6); }
 .card.success h2 { color: var(--success); margin: 0; }
 .survey-q { margin: 14px 0 4px; font-weight: 600; }
+
+/* ---- evidence / dashboard layout ---- */
+.card.banner { border-color: rgba(0,212,255,.55); }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.two-col .card { margin: 0; }
+.section-title { font-size: 1.05rem; margin: 6px 0 -4px; color: var(--text-secondary); }
+ul.plain { margin: 8px 0 0 18px; line-height: 1.7; }
