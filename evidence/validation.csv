@@ -1,1 +1,0 @@
-id,timestamp_utc,user_id,language,input_channel,mode,audio_duration,audio_bytes,asr_success,llm_success,asr_ms,llm_ms,latency_ms,rating,task_completed,error
