@@ -18,7 +18,7 @@ services:
       - key: GATEWAY_KEY
         sync: false
       - key: GATEWAY_URL
-        value: https://ladder-rss-warehouse-heel.trycloudflare.com
+        value: https://patch-institutional-attachment-very.trycloudflare.com
       - key: DEMO_VIDEO_URL
         value: ""
       - key: DB_PATH
