@@ -1,33 +1,33 @@
 # Muta: Validation Report
-Generated 2026-10-07 13:26 UTC from the application database.
+Generated 2026-10-08 09:59 UTC from the application database.
 
 ## PS2 evidence
-- Documented interactions: **5** (target: 50+) -> NOT YET MET
-- Distinct anonymous participants: **1**
-- Interactions that produced an answer: 5
-- Failed interactions: 2
+- Documented interactions: **0** (target: 50+) -> NOT YET MET
+- Distinct anonymous participants: **0**
+- Interactions that produced an answer: 0
+- Failed interactions: 0
 
 ## Usage
 | Channel | Interactions |
 |---|---|
-| web | 5 |
+| web | 0 |
 | whatsapp | 0 |
 
 | Language | Interactions |
 |---|---|
-| Nigerian English | 4 |
+| Nigerian English | 0 |
 | Hausa | 0 |
 | Yoruba | 0 |
-| Igbo | 1 |
+| Igbo | 0 |
 
 ## Quality and performance (measured)
-- ASR success rate: 60.0%
-- LLM success rate: 100.0%
+- ASR success rate: not measured
+- LLM success rate: not measured
 - Average user rating: not measured (from 0 ratings)
 - Task completion: not measured (from 0 responses)
-- Latency: average 54330 ms, median 59030 ms
-- Average ASR time 45696 ms; average LLM time 8536 ms
-- Average audio upload size: 14.5 KB
+- Latency: average not measured, median not measured
+- Average ASR time not measured; average LLM time not measured
+- Average audio upload size: not measured
 
 ## ASR accuracy (word error rate on manually verified clips)
 - Not measured yet. Run `python -m scripts.evaluate_asr` after adding clips to eval/clips/.
