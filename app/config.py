@@ -7,7 +7,7 @@ load_dotenv(BASE_DIR / ".env")
 
 # Languages the N-ATLAS ASR models cover. Whether each one actually works is
 # determined at runtime by the gateway; failures are reported honestly.
-LANGS = {"en": "Nigerian English", "ha": "Hausa", "yo": "Yoruba", "ig": "Igbo"}
+LANGS = {"en": "Nigerian English", "ig": "Igbo", "ha": "Hausa", "yo": "Yoruba"}
 
 
 class Config:
@@ -21,7 +21,7 @@ class Config:
     GATEWAY_URL = os.getenv("GATEWAY_URL", "http://127.0.0.1:9000").rstrip("/")
     GATEWAY_KEY = os.getenv("GATEWAY_KEY", "")
     DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "data" / "sauti.db"))
-    ENABLED_LANGS = [c.strip() for c in os.getenv("ENABLED_LANGS", "en,ha,yo,ig").split(",")
+    ENABLED_LANGS = [c.strip() for c in os.getenv("ENABLED_LANGS", "en,ig,ha,yo").split(",")
                      if c.strip() in LANGS]
     MAX_AUDIO_S = int(os.getenv("MAX_AUDIO_S", "90"))
     MAX_SUMMARY_AUDIO_S = int(os.getenv("MAX_SUMMARY_AUDIO_S", "180"))
