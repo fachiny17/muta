@@ -23,13 +23,13 @@
     </div>
     <div class="header-right">
       <span id="gw" class="chip" role="status" aria-live="polite">Checking AI server</span>
-      <nav class="nav" aria-label="Main navigation">
+      <nav class="nav" id="main-navigation" aria-label="Main navigation">
         {% if has_evidence %}<a class="nav-link" href="{{ url_for('web.evidence') }}">Pilot evidence</a>{% endif %}
         <a class="nav-link" href="{{ url_for('web.dashboard') if is_admin else url_for('web.login') }}">{{ 'Dashboard' if is_admin else 'Team login' }}</a>
       </nav>
       <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle colour theme" aria-pressed="false" title="Toggle colour theme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
-      </button>
+      </button><button class="icon-btn menu-toggle" id="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="main-navigation" title="Open navigation menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </div>
   </header>
 
@@ -48,7 +48,7 @@
     </section>
 
     <section class="hero-steps" aria-label="How Muta works">
-      <article class="hero-step"><span class="step-number">01 / SELECT</span><strong>Choose your language</strong><span>Use Nigerian English, Hausa, Yoruba, or Igbo.</span></article>
+      <article class="hero-step"><span class="step-number">01 / SELECT</span><strong>Choose your language</strong><span>Use Nigerian English, Igbo, Hausa, or Yoruba.</span></article>
       <article class="hero-step"><span class="step-number">02 / SPEAK</span><strong>Ask or summarize</strong><span>Record a question or a short lesson in your own words.</span></article>
       <article class="hero-step"><span class="step-number">03 / LEARN</span><strong>Review your response</strong><span>Read what Muta heard, then check the AI explanation.</span></article>
     </section>
