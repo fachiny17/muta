@@ -2,63 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Muta - Validation Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/nexlearn.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07101d">
+  <title>Muta — Validation dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M7 31V9h5l8 11 8-11h5v22h-5V17l-8 10-8-10v14z' fill='%23167456'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 {% from "_metrics.html" import metrics %}
 <div class="container">
-<header class="header">
-  <div><span class="logo-text">MUTA</span><p class="subtitle">Validation Dashboard (live values from the database)</p></div>
-  <nav class="nav">
-    <a class="nav-link" href="{{ url_for('web.index') }}">Home</a>
-    <a class="nav-link" href="{{ url_for('web.evidence') }}">Evidence</a>
-    {% if is_admin %}
-    <form method="post" action="{{ url_for('web.logout') }}" style="display:inline">
-      <button class="nav-link nav-btn" type="submit">Log out</button>
-    </form>
+  <header class="header">
+    <div class="header-left"><a class="logo" href="{{ url_for('web.index') }}" aria-label="Muta home"><svg class="logo-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M7 31V9h5l8 11 8-11h5v22h-5V17l-8 10-8-10v14H7Z" fill="currentColor"/><path d="M7 34h26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="logo-text">Muta</span></a></div>
+    <div class="header-right"><nav class="nav" aria-label="Main navigation"><a class="nav-link" href="{{ url_for('web.index') }}">Home</a><a class="nav-link" href="{{ url_for('web.evidence') }}">Evidence</a>
+      {% if is_admin %}<form method="post" action="{{ url_for('web.logout') }}"><button class="nav-link nav-btn" type="submit">Log out</button></form>{% endif %}
+    </nav><button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle colour theme" aria-pressed="false" title="Toggle colour theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button></div>
+  </header>
+  <main class="main-content stack">
+    <section class="page-heading"><div><p class="eyebrow">01 / Team workspace</p><h1 class="main-title">Validation dashboard</h1><p class="subtitle">Live values from this server's database.</p></div><div class="chip">Live database</div></section>
+
+    <section class="card toolbar-card" aria-label="Dashboard refresh controls"><label class="checkbox-label" for="auto"><input type="checkbox" id="auto"> Auto-refresh every 30 seconds</label><span class="hint" id="updated" role="status" aria-live="polite"></span></section>
+
+    {% if snap %}
+    <section class="card banner" aria-labelledby="snapshot-title">
+      <span class="banner-label">Published snapshot</span>
+      <h2 id="snapshot-title">Pilot evidence comparison</h2>
+      <p class="banner-copy">Taken {{ snap.generated_at[:16]|replace('T', ' ') }} UTC: {{ snap.stats.total_interactions }} interactions, {{ snap.stats.participants }} participants.</p>
+      {% if in_sync %}<p><strong>The live numbers below match this snapshot exactly.</strong></p>
+      {% else %}<p><strong>The live numbers below differ from it.</strong> New activity may have happened since publication, or this server may be using a different database (for example, after a free Render server restart).</p>{% endif %}
+    </section>
     {% endif %}
-    <button class="icon-btn" id="theme-toggle" title="Toggle theme" type="button">&#9680;</button>
-  </nav>
-</header>
-<main class="main-content stack">
-  <div class="card">
-    <label class="hint"><input type="checkbox" id="auto"> Auto-refresh every 30 seconds</label>
-    <span class="hint" id="updated"></span>
-  </div>
 
-  {% if snap %}
-  <div class="card {{ 'banner' if in_sync else '' }}">
-    <h2>Published pilot snapshot (the public Evidence page)</h2>
-    <p class="hint">Taken {{ snap.generated_at[:16]|replace('T', ' ') }} UTC: {{ snap.stats.total_interactions }} interactions,
-      {{ snap.stats.participants }} participants.
-      {% if in_sync %}<b>The live numbers below match this snapshot exactly.</b>
-      {% else %}The live numbers below differ from it: either new activity happened since, or this server keeps a different database from the one the snapshot came from (for example the free Render server, which only holds activity since its last restart).{% endif %}</p>
-  </div>
-  {% endif %}
+    <h2 class="section-title">Live data on this server</h2>
+    {{ metrics(s, langs) }}
 
-  <h2 class="section-title">Live data on this server</h2>
-  {{ metrics(s, langs) }}
-
-  <div class="card"><h2>Export and backup</h2>
-    <p><a href="/export.csv{% if key %}?key={{ key }}{% endif %}">Anonymized CSV (metrics only)</a>
-    {% if is_admin %} &middot; <a href="/export.csv?include_text=1">CSV with question/answer text (team only)</a>
-    &middot; <a href="/admin/backup.sqlite">Download full database backup</a>{% endif %}</p>
-    <p class="hint">"n/a" means no data yet. Nothing on this page is estimated or pre-filled.
-    On the free Render plan this data is temporary: it is erased when the server restarts or sleeps, so download a backup regularly.</p></div>
-</main>
+    <section class="card">
+      <h2>Export and backup</h2>
+      <div class="export-links"><a href="/export.csv{% if key %}?key={{ key }}{% endif %}">Download anonymized CSV</a>
+      {% if is_admin %}<a href="/export.csv?include_text=1">Download CSV with question/answer text (team only)</a><a href="/admin/backup.sqlite">Download full database backup</a>{% endif %}</div>
+      <p class="hint" style="margin-top:16px">“n/a” means no data has been recorded for that metric yet. Nothing is estimated or pre-filled. On the free Render plan, database data may be lost when the server restarts or sleeps, so download a backup regularly.</p>
+    </section>
+  </main>
+  <p class="footer-note">Use the published Evidence page when reporting pilot results. This dashboard shows the live database available to this server.</p>
 </div>
-<script>
-  document.getElementById("theme-toggle").onclick = () => document.body.classList.toggle("light-theme");
-  const auto = document.getElementById("auto");
-  document.getElementById("updated").textContent = " Last loaded " + new Date().toLocaleTimeString();
-  auto.checked = sessionStorage.getItem("muta_auto") === "1";
-  let timer = null;
-  function arm() { clearInterval(timer); if (auto.checked) timer = setInterval(() => location.reload(), 30000); }
-  auto.onchange = () => { sessionStorage.setItem("muta_auto", auto.checked ? "1" : "0"); arm(); };
-  arm();
-</script>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

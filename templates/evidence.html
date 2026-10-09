@@ -2,69 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Muta - Pilot Evidence</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/nexlearn.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07101d">
+  <title>Muta — Pilot evidence</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M7 31V9h5l8 11 8-11h5v22h-5V17l-8 10-8-10v14z' fill='%23167456'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 {% from "_metrics.html" import metrics, pct, num %}
 <div class="container">
-<header class="header">
-  <div><span class="logo-text">MUTA</span><p class="subtitle">Pilot results</p></div>
-  <nav class="nav">
-    <a class="nav-link" href="{{ url_for('web.index') }}">Home</a>
-    {% if is_admin %}<a class="nav-link" href="{{ url_for('web.dashboard') }}">Dashboard</a>{% endif %}
-    <button class="icon-btn" id="theme-toggle" title="Toggle theme" type="button">&#9680;</button>
-  </nav>
-</header>
-<main class="main-content stack">
-  {% if snap %}
-  {% set s = snap.stats %}
-  <div class="card banner">
-    <h2>Results from a real pilot with students</h2>
-    <p>Snapshot taken {{ snap.generated_at[:16]|replace('T', ' ') }} UTC. Every number below comes from the interactions recorded by the
-       Muta system itself (nothing is typed in by hand), computed by the same code as the team dashboard.</p>
-    <p class="hint">{{ s.total_interactions }} interactions from {{ s.participants }} anonymous participants.
-       {% if s.total_interactions >= 50 %}This meets the 50+ interaction requirement.{% else %}This is below the 50 interaction target.{% endif %}</p>
-  </div>
+  <header class="header">
+    <div class="header-left"><a class="logo" href="{{ url_for('web.index') }}" aria-label="Muta home"><svg class="logo-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M7 31V9h5l8 11 8-11h5v22h-5V17l-8 10-8-10v14H7Z" fill="currentColor"/><path d="M7 34h26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="logo-text">Muta</span></a><div class="header-copy"><p class="subtitle">Public pilot results</p></div></div>
+    <div class="header-right"><nav class="nav" aria-label="Main navigation"><a class="nav-link" href="{{ url_for('web.index') }}">Home</a>{% if is_admin %}<a class="nav-link" href="{{ url_for('web.dashboard') }}">Dashboard</a>{% endif %}</nav><button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle colour theme" aria-pressed="false" title="Toggle colour theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button></div>
+  </header>
+  <main class="main-content stack">
+    <section class="page-heading"><div><p class="eyebrow">02 / Pilot transparency</p><h1 class="main-title">Evidence from real use</h1><p class="subtitle">A read-only view of the pilot data published by the Muta team.</p></div><div class="chip">Public snapshot</div></section>
+    {% if snap %}
+    {% set s = snap.stats %}
+    <section class="card banner" aria-labelledby="pilot-results-title">
+      <span class="banner-label">Published pilot snapshot</span>
+      <h2 id="pilot-results-title">Results from a real pilot with students</h2>
+      <p class="banner-copy">Snapshot taken {{ snap.generated_at[:16]|replace('T', ' ') }} UTC. Every number below comes from interactions recorded by the Muta system and is calculated using the same code as the team dashboard.</p>
+      <p class="banner-copy">{{ s.total_interactions }} interactions from {{ s.participants }} anonymous participants. {% if s.total_interactions >= 50 %}This meets the 50+ interaction requirement.{% else %}This is below the 50 interaction target.{% endif %}</p>
+    </section>
 
-  {{ metrics(s, langs) }}
+    {{ metrics(s, langs) }}
 
-  <div class="card">
-    <h2>Speech recognition accuracy (word error rate)</h2>
-    {% if snap.eval and snap.eval.clips %}
-    <p class="hint">Measured on {{ snap.eval.clips }} short clips with human-verified reference transcripts. Lower is better.</p>
-    <table>
-      <tr><td><b>Language</b></td><td><b>Clips</b></td><td><b>WER</b></td><td><b>Avg ASR time</b></td></tr>
-      {% for code, v in snap.eval.by_language.items() %}
-      <tr><td>{{ langs.get(code, code) }}</td><td>{{ v.clips }}</td><td>{{ (v.wer * 100)|round(1) }}%</td><td>{{ v.avg_asr_ms }} ms</td></tr>
-      {% endfor %}
-      <tr><td><b>Overall</b></td><td><b>{{ snap.eval.clips }}</b></td><td><b>{% if snap.eval.overall_wer is not none %}{{ (snap.eval.overall_wer * 100)|round(1) }}%{% else %}n/a{% endif %}</b></td><td></td></tr>
-    </table>
+    <section class="card">
+      <h2>Speech recognition accuracy (word error rate)</h2>
+      {% if snap.eval and snap.eval.clips %}
+      <p class="hint">Measured on {{ snap.eval.clips }} short clips with human-verified reference transcripts. Lower word error rate is better.</p>
+      <div class="table-wrap"><table><thead><tr><th>Language</th><th>Clips</th><th>WER</th><th>Average ASR time</th></tr></thead><tbody>
+        {% for code, v in snap.eval.by_language.items() %}<tr><td>{{ langs.get(code, code) }}</td><td>{{ v.clips }}</td><td>{{ (v.wer * 100)|round(1) }}%</td><td>{{ v.avg_asr_ms }} ms</td></tr>{% endfor %}
+        <tr><td><strong>Overall</strong></td><td><strong>{{ snap.eval.clips }}</strong></td><td><strong>{% if snap.eval.overall_wer is not none %}{{ (snap.eval.overall_wer * 100)|round(1) }}%{% else %}n/a{% endif %}</strong></td><td></td></tr>
+      </tbody></table></div>
+      {% else %}<p class="hint">Speech recognition accuracy has not been measured yet.</p>{% endif %}
+    </section>
+
+    <section class="card">
+      <h2>How to read these numbers</h2>
+      <ul class="plain">
+        <li><strong>ASR / LLM success</strong> means the speech recognition and answer generation stages completed without a technical failure. It does not measure correctness; user ratings provide a separate signal.</li>
+        <li><strong>Task completion</strong> is the share of students who said the answer helped them finish their task.</li>
+        <li>Participants are anonymous IDs. Names, phone numbers and email addresses are not collected, and recordings are deleted right after processing.</li>
+        <li>Sample sizes may be small, so percentages should be interpreted with caution.</li>
+      </ul>
+    </section>
+
+    {% if has_csv %}<section class="card"><h2>Download the validation data</h2><p><a href="/evidence/validation.csv">Download validation.csv — anonymized interaction metrics</a></p><p class="hint">One row per interaction, containing anonymous IDs, language, channel, timings and ratings. No names, phone numbers or question text.</p></section>{% endif %}
     {% else %}
-    <p class="hint">Not measured yet.</p>
+    <section class="card notice"><span class="banner-label">Evidence not yet published</span><h2>Pilot results</h2><p>The pilot results will be published here after the pilot run. This page will show the recorded metrics and evaluation results when a snapshot is available.</p></section>
     {% endif %}
-  </div>
-
-  <div class="card">
-    <h2>How to read these numbers</h2>
-    <ul class="plain">
-      <li><b>ASR / LLM success</b> mean the speech-recognition and answer-generation steps ran without a technical failure. They do not measure whether an answer is correct; that is what the user ratings show.</li>
-      <li><b>Task completion</b> is the share of students who said the answer helped them finish their task.</li>
-      <li>Participants are anonymous IDs; no names, phone numbers or emails are collected, and recordings are deleted right after processing.</li>
-      <li>Sample sizes are small, so percentages should be read with caution.</li>
-    </ul>
-  </div>
-
-  {% if has_csv %}<div class="card"><a href="/evidence/validation.csv">Download the anonymized interaction metrics (CSV)</a>
-    <p class="hint">One row per interaction: anonymous ID, language, channel, timings, ratings. No names, phone numbers or question text.</p></div>{% endif %}
-
-  {% else %}
-  <div class="card"><h2>Pilot results</h2><p>The pilot results will be published here after the pilot run.</p></div>
-  {% endif %}
-</main>
+  </main>
+  <p class="footer-note">Published results represent the snapshot identified above; they are not live estimates.</p>
 </div>
-<script>document.getElementById("theme-toggle").onclick = () => document.body.classList.toggle("light-theme");</script>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </body>
 </html>
