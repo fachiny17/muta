@@ -1,128 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Muta</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Cpath d=%27M5 35L20 5L35 35H28L20 20L12 35H5Z%27 fill=%27%2300a2ff%27/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/nexlearn.css') }}">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07101d">
+  <meta name="description" content="A voice-first academic assistant for learning in Nigerian languages.">
+  <title>Muta — Voice-first study assistant</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M7 31V9h5l8 11 8-11h5v22h-5V17l-8 10-8-10v14z' fill='%23167456'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 <div class="container">
-
   <header class="header">
     <div class="header-left">
-      <div class="logo">
-        <svg width="36" height="36" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-          <path d="M5 35L20 5L35 35H28L20 20L12 35H5Z" fill="url(#lg)"/>
-          <defs><linearGradient id="lg" x1="5" y1="5" x2="35" y2="35"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#0095ff"/></linearGradient></defs>
+      <a class="logo" href="{{ url_for('web.index') }}" aria-label="Muta home">
+        <svg class="logo-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M7 31V9h5l8 11 8-11h5v22h-5V17l-8 10-8-10v14H7Z" fill="currentColor"/>
+          <path d="M7 34h26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
         <span class="logo-text">Muta</span>
-      </div>
+      </a>
     </div>
     <div class="header-right">
-      <span id="gw" class="chip">checking server...</span>
-      <nav class="nav">
+      <span id="gw" class="chip" role="status" aria-live="polite">Checking AI server</span>
+      <nav class="nav" aria-label="Main navigation">
         {% if has_evidence %}<a class="nav-link" href="{{ url_for('web.evidence') }}">Pilot evidence</a>{% endif %}
-        <a class="nav-link" href="{{ url_for('web.dashboard') }}">{{ 'Dashboard' if is_admin else 'Team login' }}</a>
+        <a class="nav-link" href="{{ url_for('web.dashboard') if is_admin else url_for('web.login') }}">{{ 'Dashboard' if is_admin else 'Team login' }}</a>
       </nav>
-      <button class="icon-btn" id="theme-toggle" title="Toggle dark/light mode" type="button">&#9680;</button>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle colour theme" aria-pressed="false" title="Toggle colour theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+      </button>
     </div>
   </header>
 
-  <main class="main-content stack">
-    <div class="title-section">
-      <h1 class="main-title">Ask by voice. Learn in your language.</h1>
+  <main class="main-content home-content stack">
+    <section class="title-section" aria-labelledby="page-title">
+      <p class="hero-kicker">Muta learning interface <span aria-hidden="true">/</span> N-ATLAS powered</p>
+      <h1 class="main-title" id="page-title">Ask by voice.<br><span class="title-accent">Learn with confidence.</span></h1>
       <div class="subtitle-wrapper">
-        <p class="subtitle">Speak one academic question or record a short lesson, and N-ATLAS answers or summarizes it.</p>
-        <div class="audio-visualizer" aria-hidden="true">
-          {% for i in range(16) %}<div class="bar" style="--delay:{{ i }}"></div>{% endfor %}
-        </div>
-        <div class="recording-status" id="recording-status-bar" style="display:none;">
-          <div class="recording-indicator"><div class="pulse"></div></div>
+        <p class="subtitle">Ask an academic question or record a short lesson. Muta listens and responds with help from N-ATLAS, so you can focus on learning instead of typing.</p>
+        <div class="recording-status" id="recording-status-bar" hidden aria-live="polite">
+          <span class="recording-indicator" aria-hidden="true"></span>
           <span id="recording-status-label">Recording</span>
           <span class="duration" id="recording-duration">00:00</span>
         </div>
       </div>
-    </div>
-
-    <section id="offline" class="card notice" hidden>
-      <h2>The AI server is resting</h2>
-      <p>The N-ATLAS model server is currently offline, so voice answers are unavailable right now. Please try again in a few minutes.</p>
-      {% if demo_url %}<p>You can watch a recorded demo here: <a href="{{ demo_url }}" target="_blank" rel="noopener">demo video</a></p>{% endif %}
     </section>
 
-    <section id="consent" class="card notice">
-      <h2>Before you start</h2>
-      <p>Muta is an AI study assistant, not a human teacher. Check important answers with your teacher.</p>
-      <p>We store an anonymous ID, your language, the text of your question and the answer, your ratings, and timing data.
-         We do not ask for your name, phone number or email, and your recording is deleted right after processing.</p>
+    <section class="hero-steps" aria-label="How Muta works">
+      <article class="hero-step"><span class="step-number">01 / SELECT</span><strong>Choose your language</strong><span>Use Nigerian English, Hausa, Yoruba, or Igbo.</span></article>
+      <article class="hero-step"><span class="step-number">02 / SPEAK</span><strong>Ask or summarize</strong><span>Record a question or a short lesson in your own words.</span></article>
+      <article class="hero-step"><span class="step-number">03 / LEARN</span><strong>Review your response</strong><span>Read what Muta heard, then check the AI explanation.</span></article>
+    </section>
+
+    <section id="offline" class="card notice" hidden aria-live="polite">
+      <h2>The AI server is resting</h2>
+      <p>The N-ATLAS model server is not responding right now, so new voice answers may be unavailable. You can try again in a few minutes.</p>
+      {% if demo_url %}<p>You can also watch a recorded demo: <a href="{{ demo_url }}" target="_blank" rel="noopener noreferrer">open the demo video</a>.</p>{% endif %}
+    </section>
+
+    <section id="consent" class="card notice consent-card" aria-labelledby="consent-title">
+      <p class="eyebrow">00 / Privacy and consent</p>
+      <div class="card-heading">
+        <div class="card-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 19 6v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <div><h2 id="consent-title">A quick note before you start</h2><p class="hint">Please understand what Muta does and what it saves.</p></div>
+      </div>
+      <ul class="consent-points">
+        <li>Muta is an AI study assistant, not a human teacher. Answers can contain mistakes, so check important information with your teacher or course material.</li>
+        <li>We store an anonymous ID, your chosen language, question and answer text, ratings and timings. We do not ask for your name, phone number or email.</li>
+        <li>Your voice recording is deleted right after processing.</li>
+      </ul>
       <button id="agree" class="btn btn-primary" type="button">I understand and agree</button>
     </section>
 
-    <section id="tutor" hidden>
-      <div class="card">
-        <label for="lang"><b>Language</b></label>
-        <select id="lang" class="field">
-          {% for code, name in langs.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
-        </select>
-
-        <label><b>What do you want to do?</b></label>
-        <div class="seg" id="mode">
-          <button type="button" data-m="question" class="sel">Ask a question</button>
-          <button type="button" data-m="summary">Summarize a lesson</button>
+    <section id="tutor" class="stack" hidden aria-label="Voice study assistant">
+      <section class="card session-card" aria-labelledby="start-title">
+        <div class="card-header">
+          <div><p class="eyebrow">01 / Your study session</p><h2 id="start-title">What would you like help with?</h2><p class="hint">Choose a language and a task, then speak naturally.</p></div>
         </div>
 
-        <div style="text-align:center; margin-top:1rem;">
-          <button class="btn btn-primary mic-big" id="mic" type="button" aria-label="Start recording">
-            <svg width="56" height="56" viewBox="0 0 60 60" fill="none" aria-hidden="true">
-              <path d="M30 8C21.7 8 15 14.7 15 23V32C15 40.3 21.7 47 30 47C38.3 47 45 40.3 45 32V23C45 14.7 38.3 8 30 8Z" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 32C12 38 12 41 12 41C12 46.5 20.2 51 30 51C39.8 51 48 46.5 48 41C48 41 48 38 48 32" stroke="currentColor" stroke-width="2"/>
-              <line x1="30" y1="47" x2="30" y2="55" stroke="currentColor" stroke-width="2"/>
-            </svg>
-          </button>
-          <p id="status" role="status" class="hint" style="margin-top:12px;">Tap the microphone, speak, then tap again to stop.</p>
+        <div class="control-block">
+          <label for="lang" class="field-label" data-step="01">Response language</label>
+          <select id="lang" class="field">
+            {% for code, name in langs.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+          </select>
         </div>
-        <details class="hint" style="margin-top:8px;">
-          <summary>Need an idea? Try asking one of these</summary>
-          <ul style="margin:8px 0 0 18px;">
-            <li>What is the difference between stress and strain?</li>
-            <li>State the first law of thermodynamics.</li>
-            <li>Explain photosynthesis in simple words.</li>
-            <li>What is a noun? Give two examples.</li>
-          </ul>
-        </details>
-      </div>
 
-      <div id="out" hidden>
-        <div class="card"><h2>What I heard</h2><p id="transcription-text"></p>
-          <p class="hint">Words: <span id="word-count">0</span></p></div>
-        <div class="card"><h2 id="answer-title">Answer</h2><p id="answer" class="answer-text"></p>
+        <div class="control-block">
+          <div class="field-label" id="mode-label" data-step="02">Choose a task</div>
+          <div class="seg" id="mode" role="group" aria-labelledby="mode-label">
+            <button type="button" data-m="question" class="sel" aria-pressed="true">Ask a question<span>Get an explanation</span></button>
+            <button type="button" data-m="summary" aria-pressed="false">Summarize a lesson<span>Capture the key points</span></button>
+          </div>
+        </div>
+
+        <div class="mic-area" aria-label="Voice recording controls">
+          <div class="mic-wrap">
+            <span class="mic-ring" aria-hidden="true"></span>
+            <button class="mic-big" id="mic" type="button" aria-label="Start recording" aria-pressed="false">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="18" y="5" width="12" height="25" rx="6"/><path d="M11 22v2a13 13 0 0 0 26 0v-2M24 37v6M17 43h14"/></svg>
+            </button>
+          </div>
+          <div class="level-meter" id="level-meter" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <p id="status" class="mic-instruction" role="status" aria-live="polite">Tap the microphone, speak clearly, then tap Stop when you're done.</p>
+          <details class="helper-details">
+            <summary>Need an idea? Try a sample question</summary>
+            <ul class="sample-list">
+              <li>What is the difference between stress and strain?</li>
+              <li>State the first law of thermodynamics.</li>
+              <li>Explain photosynthesis in simple words.</li>
+              <li>What is a noun? Give two examples.</li>
+            </ul>
+          </details>
+        </div>
+      </section>
+
+      <section id="processing" class="card processing-card" hidden aria-live="polite" aria-busy="true">
+        <div class="processing-heading"><span class="spinner" aria-hidden="true"></span><div><h2>Working on your recording</h2><p id="processing-stage" class="processing-stage">Sending your recording securely</p></div></div>
+        <p class="processing-note">Elapsed time: <span id="elapsed-counter" class="elapsed-counter">0 seconds</span>. A first request, or a server waking from idle, can take longer.</p>
+        <div class="skeleton-stack" aria-hidden="true"><div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton short"></div></div>
+      </section>
+
+      <section id="out" class="result-stack" hidden aria-live="polite">
+        <article class="card result-card" aria-labelledby="transcript-heading">
+          <div class="card-header"><div class="card-heading"><div class="card-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h12M8 10h12M8 15h8M4 5h.01M4 10h.01M4 15h.01M4 20h16"/></svg></div><div><h2 id="transcript-heading">What I heard</h2><p class="hint">Check that your words were captured correctly.</p></div></div><span class="word-count">Words: <span id="word-count">0</span></span></div>
+          <p id="transcription-text" class="result-body">Your transcript will appear here.</p>
+        </article>
+
+        <article class="card result-card" aria-labelledby="answer-title">
+          <div class="card-header"><div class="card-heading"><div class="card-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 14 9l6 3-6 2-2 7-2-7-6-2 6-3 2-6Z"/></svg></div><div><h2 id="answer-title">Answer</h2><p class="hint">Generated by N-ATLAS. Check important details.</p></div></div></div>
+          <p id="answer" class="result-body answer-text" lang="en"></p>
           <div class="card-actions">
-            <button class="btn btn-secondary" id="copy" type="button">Copy</button>
+            <button class="btn btn-secondary" id="copy" type="button">Copy answer</button>
             <button class="btn btn-secondary" id="dl-transcript" type="button">Download transcript</button>
             <button class="btn btn-secondary" id="dl-answer" type="button">Download answer</button>
-          </div></div>
-        <div class="card" id="fb">
-          <h2>Quick survey</h2>
+          </div>
+        </article>
+
+        <section class="card" id="fb" aria-labelledby="survey-title" hidden>
+          <p class="eyebrow">Help us improve</p><h2 id="survey-title">Quick survey</h2><p class="hint">Your feedback is saved with an anonymous interaction ID.</p>
           <p class="survey-q">Was this answer useful?</p>
-          <div class="rate" id="stars"><button type="button" data-r="1">1</button><button type="button" data-r="2">2</button><button type="button" data-r="3">3</button><button type="button" data-r="4">4</button><button type="button" data-r="5">5</button></div>
-          <p class="hint">1 = not useful, 5 = very useful</p>
+          <div class="rate" id="stars" role="group" aria-label="Rate this answer from 1 to 5">
+            <button type="button" data-r="1" aria-pressed="false">1</button><button type="button" data-r="2" aria-pressed="false">2</button><button type="button" data-r="3" aria-pressed="false">3</button><button type="button" data-r="4" aria-pressed="false">4</button><button type="button" data-r="5" aria-pressed="false">5</button>
+          </div>
+          <p class="hint">1 = not useful · 5 = very useful</p>
           <p class="survey-q">Did it help you complete your task?</p>
-          <div class="rate" id="task"><button type="button" data-t="1">Yes</button><button type="button" data-t="0">No</button></div>
-          <button class="btn btn-secondary" id="fb-submit" type="button" hidden>Submit rating only</button>
-          <p id="fbmsg" class="hint"></p>
-        </div>
-        <div class="card success" id="fb-done" hidden role="status">
-          <h2>Survey successfully saved! Thank you.</h2>
-        </div>
-      </div>
+          <div class="rate" id="task" role="group" aria-label="Did this help complete your task?">
+            <button type="button" data-t="1" aria-pressed="false">Yes</button><button type="button" data-t="0" aria-pressed="false">No</button>
+          </div>
+          <div class="survey-actions"><button class="btn btn-secondary" id="fb-submit" type="button" hidden>Submit rating only</button><p id="fbmsg" class="hint" role="status" aria-live="polite"></p></div>
+        </section>
+        <section class="card success" id="fb-done" hidden role="status" aria-live="polite"><h2>Survey successfully saved! Thank you.</h2></section>
+      </section>
     </section>
   </main>
-  <p class="hint" style="text-align:center; padding:16px;">Answers are generated by N-ATLAS and may contain mistakes.</p>
+  <p class="footer-note">Muta is an AI study assistant, not a substitute for your teacher. AI-generated answers may contain mistakes.</p>
 </div>
-<div id="toast-root"></div>
+<div id="toast-root" aria-live="polite" aria-atomic="true"></div>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tutor.js') }}"></script>
 </body>
 </html>
