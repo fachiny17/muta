@@ -1,162 +1,496 @@
 (() => {
-  const $ = (id) => document.getElementById(id);
-  const MAX_S = { question: 60, summary: 180 };
-  let recorder, stream, chunks = [], timer, interactionId = null, mime = "", mode = "question", lastTranscript = "", lastAnswer = "";
-  let rating = null, taskDone = null, submitting = false;   // survey state
-
-  // ---- helpers carried over from NexLearn ----
-  function toast(msg, type = "info") {
-    const el = document.createElement("div");
-    el.className = "toast " + type;
-    el.textContent = msg;               // textContent, never innerHTML (NexLearn's modal used innerHTML)
-    $("toast-root").replaceChildren(el);
-    setTimeout(() => el.remove(), 3500);
-  }
-  function download(content, filename) {
-    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
-    const a = Object.assign(document.createElement("a"), { href: url, download: filename });
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  }
-  $("theme-toggle").onclick = () => document.body.classList.toggle("light-theme");
-
-  // ---- consent + status ----
-  const status = (t) => { $("status").textContent = t; };
-  const showTutor = () => { $("consent").hidden = true; $("tutor").hidden = false; };
-  try { if (localStorage.getItem("cv_consent") === "1") showTutor(); } catch (e) {}
-  $("agree").onclick = () => { try { localStorage.setItem("cv_consent", "1"); } catch (e) {} showTutor(); };
-
-  fetch("/health").then(r => r.json()).then(h => {
-    const ok = h.gateway && h.gateway.ok;
-    $("gw").textContent = ok ? "N-ATLAS online" : "N-ATLAS offline";
-    $("gw").className = "chip " + (ok ? "ok" : "bad");
-    $("offline").hidden = !!ok;
-  }).catch(() => { $("gw").textContent = "server unreachable"; $("gw").className = "chip bad"; });
-
-  document.querySelectorAll("#mode button").forEach(b => b.onclick = () => {
-    mode = b.dataset.m;
-    document.querySelectorAll("#mode button").forEach(x => x.classList.toggle("sel", x === b));
-    status(mode === "summary" ? "Record a short lesson (up to 3 minutes), then tap to stop."
-                              : "Tap the microphone, speak, then tap again to stop.");
+  // Recording controls live here so transcription quality can be tuned in one place.
+  const AUDIO_BITRATE = 24000;
+  const AUDIO_CONSTRAINTS = Object.freeze({
+    channelCount: 1,
+    echoCancellation: true,
+    noiseSuppression: true
   });
 
-  // ---- recording (MediaRecorder, as in NexLearn) ----
+  const $ = (id) => document.getElementById(id);
+  const MAX_SECONDS = Object.freeze({ question: 60, summary: 180 });
+  const LANGUAGE_TAGS = Object.freeze({ en: "en", ha: "ha", yo: "yo", ig: "ig" });
+  let recorder = null;
+  let stream = null;
+  let chunks = [];
+  let recordingTimer = null;
+  let processingTimer = null;
+  let interactionId = null;
+  let mime = "";
+  let mode = "question";
+  let lastTranscript = "";
+  let lastAnswer = "";
+  let rating = null;
+  let taskDone = null;
+  let submitting = false;
+  let appState = "consent";
+  let processingStartedAt = 0;
+  let audioContext = null;
+  let analyser = null;
+  let sourceNode = null;
+  let meterFrame = 0;
+
+  function setState(next) {
+    appState = next;
+    document.body.dataset.mutaState = next;
+  }
+
+  function toast(message, type = "info") {
+    const root = $("toast-root");
+    const el = document.createElement("div");
+    el.className = "toast " + type;
+    el.setAttribute("role", type === "error" ? "alert" : "status");
+    el.textContent = message;
+    root.replaceChildren(el);
+    window.setTimeout(() => { if (el.isConnected) el.remove(); }, 4200);
+  }
+
+  function download(content, filename) {
+    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function showTutor() {
+    $("consent").hidden = true;
+    $("tutor").hidden = false;
+    setState("idle");
+  }
+
+  const status = (message) => { $("status").textContent = message; };
+
+  try {
+    if (localStorage.getItem("cv_consent") === "1") showTutor();
+  } catch (error) {
+  }
+
+  $("agree").addEventListener("click", () => {
+    try { localStorage.setItem("cv_consent", "1"); } catch (error) {}
+    showTutor();
+  });
+
+  function gatewayState(ok, unreachable = false) {
+    const chip = $("gw");
+    chip.textContent = ok ? "N-ATLAS online" : (unreachable ? "Server unreachable" : "N-ATLAS offline");
+    chip.className = "chip " + (ok ? "ok" : "bad");
+    $("offline").hidden = !!ok;
+  }
+
+  fetch("/health", { headers: { Accept: "application/json" } })
+    .then((response) => {
+      if (!response.ok) throw new Error("health check failed");
+      return response.json();
+    })
+    .then((health) => gatewayState(!!(health && health.gateway && health.gateway.ok)))
+    .catch(() => gatewayState(false, true));
+
+  function setModeButtons() {
+    document.querySelectorAll("#mode button").forEach((button) => {
+      const selected = button.dataset.m === mode;
+      button.classList.toggle("sel", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+  }
+
+  document.querySelectorAll("#mode button").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (["requesting", "recording", "processing"].includes(appState)) return;
+      mode = button.dataset.m;
+      setModeButtons();
+      status(mode === "summary"
+        ? "Record a short lesson, up to 3 minutes, then tap Stop."
+        : "Tap the microphone, speak clearly, then tap Stop when you're done.");
+    });
+  });
+
+  const mmss = (seconds) => String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+
   function pickMime() {
-    const opts = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
-    return opts.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+    if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== "function") return "";
+    const options = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+    return options.find((type) => MediaRecorder.isTypeSupported(type)) || "";
   }
-  const mmss = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 
-  async function start() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      toast("Audio recording is not supported in this browser, or the page is not on https/localhost.", "error"); return;
+  function stopMeter() {
+    if (meterFrame) window.cancelAnimationFrame(meterFrame);
+    meterFrame = 0;
+    try { if (sourceNode) sourceNode.disconnect(); } catch (error) {}
+    sourceNode = null;
+    analyser = null;
+    if (audioContext) {
+      const contextToClose = audioContext;
+      audioContext = null;
+      try { contextToClose.close().catch(() => {}); } catch (error) {}
     }
+    document.querySelectorAll("#level-meter span").forEach((bar) => { bar.style.height = "5px"; });
+  }
+
+  function startMeter(activeStream) {
+    stopMeter();
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
-    } catch (e) { toast("Could not access the microphone. Check browser permissions.", "error"); return; }
-    mime = pickMime(); chunks = [];
-    const opts = mime ? { mimeType: mime, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 }; // small uploads for weak networks
-    recorder = new MediaRecorder(stream, opts);
-    recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-    recorder.onstop = send;
-    recorder.start();
-    document.body.classList.add("is-recording"); $("mic").classList.add("rec");
-    $("recording-status-bar").style.display = "flex";
-    let s = 0; $("recording-duration").textContent = mmss(0); status("Recording...");
-    timer = setInterval(() => { s++; $("recording-duration").textContent = mmss(s); if (s >= MAX_S[mode]) stop(); }, 1000);
+      audioContext = new AudioContextClass();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      sourceNode = audioContext.createMediaStreamSource(activeStream);
+      sourceNode.connect(analyser);
+      const samples = new Uint8Array(analyser.fftSize);
+      const bars = Array.from(document.querySelectorAll("#level-meter span"));
+      const draw = () => {
+        if (!analyser || appState !== "recording") return;
+        analyser.getByteTimeDomainData(samples);
+        let sum = 0;
+        for (let index = 0; index < samples.length; index += 1) {
+          const value = (samples[index] - 128) / 128;
+          sum += value * value;
+        }
+        const level = Math.min(1, Math.sqrt(sum / samples.length) * 4.5);
+        bars.forEach((bar, index) => {
+          const variation = 0.35 + Math.abs(Math.sin((index + 1) * 1.7)) * 0.65;
+          bar.style.height = Math.max(4, 4 + level * 22 * variation) + "px";
+        });
+        meterFrame = window.requestAnimationFrame(draw);
+      };
+      if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+      draw();
+    } catch (error) {
+      stopMeter();
+    }
   }
 
-  function stop() {
-    clearInterval(timer);
-    if (recorder && recorder.state !== "inactive") recorder.stop();
-    stream && stream.getTracks().forEach(t => t.stop());
-    document.body.classList.remove("is-recording"); $("mic").classList.remove("rec");
-    $("recording-status-bar").style.display = "none";
+  function updateRecordingUI(recording) {
+    document.body.classList.toggle("is-recording", recording);
+    $("mic").classList.toggle("rec", recording);
+    $("mic").setAttribute("aria-pressed", String(recording));
+    $("mic").setAttribute("aria-label", recording ? "Stop recording" : "Start recording");
+    $("recording-status-bar").hidden = !recording;
+    $("recording-status-label").textContent = recording ? "Recording" : "Recording stopped";
   }
 
-  async function send() {
-    const type = (recorder.mimeType || mime || "audio/webm").split(";")[0];
-    const blob = new Blob(chunks, { type });
-    if (blob.size < 1500) { toast("That was too short. Please try again.", "error"); status(""); return; }
-    const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
-    const fd = new FormData();
-    fd.append("audio", blob, "recording." + ext);
-    fd.append("language", $("lang").value); fd.append("mode", mode); fd.append("consent", "1");
+  function microphoneError(error) {
+    const name = error && error.name;
+    if (name === "NotAllowedError" || name === "SecurityError") {
+      return "Microphone permission is blocked. Allow microphone access in your browser settings, then try again.";
+    }
+    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      return "No microphone was found. Connect or enable a microphone, then try again.";
+    }
+    if (name === "NotReadableError" || name === "TrackStartError") {
+      return "The microphone is busy in another app. Close that app and try again.";
+    }
+    return "Muta could not start the microphone. Check browser permissions and try again.";
+  }
+
+  async function startRecording() {
+    if (["requesting", "recording", "processing"].includes(appState)) return;
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      toast("Microphone access needs a supported browser and a secure page (HTTPS or localhost).", "error");
+      status("This browser cannot access the microphone. Open Muta over HTTPS or use a supported browser.");
+      return;
+    }
+    if (!window.MediaRecorder) {
+      toast("Audio recording is not supported by this browser. Try a current version of Chrome, Firefox or Safari.", "error");
+      return;
+    }
+
+    setState("requesting");
     $("mic").disabled = true;
-    status(`Processing (${Math.round(blob.size / 1024)} KB uploaded). This can take several seconds...`);
+    status("Allow microphone access when your browser asks. Your recording is deleted after processing.");
     try {
-      const r = await fetch("/api/ask", { method: "POST", body: fd });
-      let d;
-      try { d = await r.json(); } catch (e) { d = { ok: false, message: "The server sent an unexpected reply. Please try again." }; }
-      render(d);
-    } catch (e) { toast("Could not reach the server. Check your connection and try again.", "error"); status(""); }
+      stream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS });
+      mime = pickMime();
+      chunks = [];
+      const options = mime ? { mimeType: mime, audioBitsPerSecond: AUDIO_BITRATE } : { audioBitsPerSecond: AUDIO_BITRATE };
+      recorder = new MediaRecorder(stream, options);
+      recorder.addEventListener("dataavailable", (event) => { if (event.data && event.data.size) chunks.push(event.data); });
+      recorder.addEventListener("stop", sendRecording, { once: true });
+      recorder.addEventListener("error", () => {
+        finishStream();
+        $("mic").disabled = false;
+        setState("idle");
+        updateRecordingUI(false);
+        toast("The browser stopped the recording unexpectedly. Please record again.", "error");
+        status("Recording interrupted. Try again when you're ready.");
+      }, { once: true });
+      recorder.start();
+      setState("recording");
+      $("mic").disabled = false;
+      updateRecordingUI(true);
+      $("recording-duration").textContent = mmss(0);
+      status("Recording. Speak naturally, then tap Stop when you're finished.");
+      startMeter(stream);
+      let seconds = 0;
+      recordingTimer = window.setInterval(() => {
+        seconds += 1;
+        $("recording-duration").textContent = mmss(seconds);
+        if (seconds >= MAX_SECONDS[mode]) stopRecording();
+      }, 1000);
+    } catch (error) {
+      finishStream();
+      $("mic").disabled = false;
+      setState("idle");
+      updateRecordingUI(false);
+      const message = microphoneError(error);
+      status(message);
+      toast(message, "error");
+    }
+  }
+
+  function finishStream() {
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+    stopMeter();
+  }
+
+  function stopRecording() {
+    if (!recorder || recorder.state !== "recording") return;
+    if (recordingTimer) window.clearInterval(recordingTimer);
+    recordingTimer = null;
+    setState("processing");
+    updateRecordingUI(false);
+    status("Recording complete. Preparing your upload...");
+    try { recorder.stop(); } catch (error) {
+      finishStream();
+      setState("idle");
+      $("mic").disabled = false;
+      toast("The recording could not be completed. Please try again.", "error");
+    }
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    stopMeter();
+  }
+
+  function elapsedLabel(seconds) {
+    return seconds === 1 ? "1 second" : seconds + " seconds";
+  }
+
+  function processingStage(seconds) {
+    if (seconds < 4) return "Sending your recording";
+    if (seconds < 14) return "Listening to your voice";
+    if (seconds < 35) return "Preparing your answer";
+    return "Still working — the first request after idle can take longer";
+  }
+
+  function beginProcessing() {
+    $("processing").hidden = false;
+    $("processing").setAttribute("aria-busy", "true");
+    processingStartedAt = window.performance && performance.now ? performance.now() : Date.now();
+    $("elapsed-counter").textContent = "0 seconds";
+    $("processing-stage").textContent = processingStage(0);
+    setState("processing");
+    if (processingTimer) window.clearInterval(processingTimer);
+    processingTimer = window.setInterval(() => {
+      const now = window.performance && performance.now ? performance.now() : Date.now();
+      const seconds = Math.max(0, Math.floor((now - processingStartedAt) / 1000));
+      $("elapsed-counter").textContent = elapsedLabel(seconds);
+      $("processing-stage").textContent = processingStage(seconds);
+    }, 1000);
+  }
+
+  function endProcessing() {
+    if (processingTimer) window.clearInterval(processingTimer);
+    processingTimer = null;
+    $("processing").hidden = true;
+    $("processing").setAttribute("aria-busy", "false");
+  }
+
+  function fallbackMessage(httpStatus) {
+    if (httpStatus === 400) return "Muta could not accept that recording. Check your language selection and record again.";
+    if (httpStatus === 413) return "That recording is too large to upload. Record a shorter clip and try again.";
+    if (httpStatus === 429) return "You've reached the current usage limit. Please wait a while before trying again.";
+    if (httpStatus >= 500) return "The AI service encountered a problem. Please try again in a little while.";
+    return "Muta could not process that recording. Please try again.";
+  }
+
+  function friendlyMessage(data, httpStatus) {
+    const message = data && typeof data.message === "string" ? data.message.trim() : "";
+    if (httpStatus === 413) return "That recording is too large to upload. Record a shorter clip and try again.";
+    if (httpStatus === 429) return message || fallbackMessage(httpStatus);
+    if (httpStatus >= 500) return "The AI service encountered a problem. Please try again in a little while.";
+    return message || fallbackMessage(httpStatus || 0);
+  }
+
+  async function sendRecording() {
+    const activeRecorder = recorder;
+    const type = ((activeRecorder && activeRecorder.mimeType) || mime || "audio/webm").split(";")[0];
+    const blob = new Blob(chunks, { type });
+    finishStream();
+    if (blob.size < 1500) {
+      endProcessing();
+      setState("idle");
+      $("mic").disabled = false;
+      status("No clear audio was captured. Try speaking a little longer and closer to the microphone.");
+      toast("That recording was too short. Please speak for a little longer and try again.", "error");
+      return;
+    }
+
+    const extension = type.includes("mp4") ? "m4a" : (type.includes("ogg") ? "ogg" : "webm");
+    const form = new FormData();
+    form.append("audio", blob, "recording." + extension);
+    form.append("language", $("lang").value);
+    form.append("mode", mode);
+    form.append("consent", "1");
+    $("mic").disabled = true;
+    $("out").hidden = true;
+    beginProcessing();
+    status("Your recording has been sent. Muta is transcribing it and preparing a response.");
+
+    try {
+      const response = await fetch("/api/ask", { method: "POST", body: form, headers: { Accept: "application/json" } });
+      let data;
+      try { data = await response.json(); }
+      catch (error) { data = { ok: false, message: "The server sent an unexpected reply. Please try again." }; }
+      if (!response.ok && (!data || data.ok !== false)) data = { ok: false, message: friendlyMessage(data, response.status) };
+      if (data && data.ok === false) data.message = friendlyMessage(data, response.status);
+      renderResult(data, response.status);
+    } catch (error) {
+      endProcessing();
+      setState("idle");
+      $("mic").disabled = false;
+      gatewayState(false, true);
+      const message = "Muta could not reach the server. Check your connection, then try again.";
+      status(message);
+      toast(message, "error");
+    }
+  }
+
+  function renderResult(data, httpStatus = 200) {
+    endProcessing();
+    $("out").hidden = false;
+    lastTranscript = data && typeof data.transcript === "string" ? data.transcript : "";
+    $("transcription-text").textContent = lastTranscript || "No transcript was returned. You can try recording again.";
+    $("word-count").textContent = String(lastTranscript.split(/\s+/).filter(Boolean).length);
+    $("answer-title").textContent = mode === "summary" ? "Lesson summary" : "Answer";
+    $("answer").lang = LANGUAGE_TAGS[$("lang").value] || "en";
+    resetSurvey();
+
+    if (data && data.ok) {
+      interactionId = data.interaction_id;
+      lastAnswer = typeof data.answer === "string" ? data.answer : "";
+      $("answer").textContent = lastAnswer || "No answer was returned. Please try again.";
+      $("fb").hidden = false;
+      const latency = Number(data.latency_ms);
+      const doneMessage = Number.isFinite(latency) && latency >= 0
+        ? `Done in ${(latency / 1000).toFixed(1)} seconds. Please rate the answer below.`
+        : "Your answer is ready. Please rate it below.";
+      status(doneMessage);
+      setState("answered");
+    } else {
+      interactionId = null;
+      lastAnswer = "";
+      const message = friendlyMessage(data, httpStatus);
+      $("answer").textContent = message;
+      $("fb").hidden = true;
+      status(message);
+      toast(message, "error");
+      setState("idle");
+    }
     $("mic").disabled = false;
   }
 
-  function render(d) {
-    $("out").hidden = false;
-    lastTranscript = d.transcript || "";
-    $("transcription-text").textContent = lastTranscript || "(no transcript)";
-    $("word-count").textContent = lastTranscript.split(/\s+/).filter(Boolean).length;
-    $("answer-title").textContent = mode === "summary" ? "Lesson summary" : "Answer";
-    resetSurvey();
-    if (d.ok) {
-      interactionId = d.interaction_id; lastAnswer = d.answer;
-      $("answer").textContent = d.answer; $("fb").hidden = false;
-      status(`Done in ${(d.latency_ms / 1000).toFixed(1)}s. Please rate the answer below.`);
-    } else {
-      interactionId = null; lastAnswer = "";
-      $("answer").textContent = d.message || "Something went wrong. Please try again.";
-      $("fb").hidden = true; status("");
-    }
-  }
-
-  // ---- survey: choose both answers -> saved once -> survey disappears -> thank-you message ----
   function resetSurvey() {
-    rating = null; taskDone = null; submitting = false;
+    rating = null;
+    taskDone = null;
+    submitting = false;
     $("fbmsg").textContent = "";
     $("fb-submit").hidden = true;
     $("fb-done").hidden = true;
-    document.querySelectorAll("#fb button").forEach(b => b.classList.remove("sel"));
+    document.querySelectorAll("#fb button").forEach((button) => {
+      button.classList.remove("sel");
+      button.setAttribute("aria-pressed", "false");
+    });
+    setSurveyDisabled(false);
   }
 
-  function mark(group, btn) {
-    document.querySelectorAll(group + " button").forEach(b => b.classList.toggle("sel", b === btn));
+  function mark(group, selectedButton) {
+    document.querySelectorAll(group + " button").forEach((button) => {
+      const selected = button === selectedButton;
+      button.classList.toggle("sel", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+  }
+
+  function setSurveyDisabled(disabled) {
+    document.querySelectorAll("#stars button, #task button, #fb-submit").forEach((button) => {
+      button.disabled = disabled;
+    });
   }
 
   async function submitSurvey() {
     if (!interactionId || submitting || rating === null) return;
     submitting = true;
+    setSurveyDisabled(true);
+    $("fbmsg").textContent = "Saving your feedback…";
     const payload = { interaction_id: interactionId, rating };
     if (taskDone !== null) payload.task_completed = taskDone;
     try {
-      const r = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload) });
-      if (!r.ok) throw new Error("save failed");
-      $("fb").hidden = true;            // the questions disappear
-      $("fb-done").hidden = false;      // permanent thank-you message
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload)
+      });
+      let result = {};
+      try { result = await response.json(); } catch (error) {}
+      if (!response.ok || !result.ok) throw new Error(result && result.message ? result.message : "Could not save the survey. Please try again.");
+      $("fbmsg").textContent = "";
+      $("fb").hidden = true;
+      $("fb-done").hidden = false;
       toast("Survey successfully saved! Thank you.", "success");
-      interactionId = null;             // this answer has now been rated
-    } catch (e) {
+      interactionId = null;
       submitting = false;
-      toast("Could not save the survey. Please try again.", "error");
+      setState("complete");
+    } catch (error) {
+      submitting = false;
+      setSurveyDisabled(false);
+      const message = error && error.message && !/Unexpected token|JSON/i.test(error.message)
+        ? error.message
+        : "Muta could not save your feedback. Check your connection and try again.";
+      $("fbmsg").textContent = message;
+      toast(message, "error");
     }
   }
 
-  document.querySelectorAll("#stars button").forEach(b => b.onclick = () => {
-    rating = +b.dataset.r; mark("#stars", b);
-    if (taskDone !== null) submitSurvey();      // both answered -> save automatically
-    else $("fb-submit").hidden = false;         // otherwise offer "rating only"
+  document.querySelectorAll("#stars button").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (submitting) return;
+      rating = Number(button.dataset.r);
+      mark("#stars", button);
+      if (taskDone !== null) submitSurvey();
+      else $("fb-submit").hidden = false;
+    });
   });
-  document.querySelectorAll("#task button").forEach(b => b.onclick = () => {
-    taskDone = b.dataset.t === "1"; mark("#task", b);
-    if (rating !== null) submitSurvey();
+
+  document.querySelectorAll("#task button").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (submitting) return;
+      taskDone = button.dataset.t === "1";
+      mark("#task", button);
+      if (rating !== null) submitSurvey();
+    });
   });
-  $("fb-submit").onclick = submitSurvey;
+  $("fb-submit").addEventListener("click", submitSurvey);
 
-  // ---- copy / download (from NexLearn) ----
-  $("copy").onclick = () => navigator.clipboard.writeText(lastAnswer).then(() => toast("Copied.", "success"), () => toast("Copy failed.", "error"));
-  $("dl-transcript").onclick = () => lastTranscript ? download(lastTranscript, "transcript.txt") : toast("Nothing to download yet.", "error");
-  $("dl-answer").onclick = () => lastAnswer ? download(lastAnswer, "answer.txt") : toast("Nothing to download yet.", "error");
+  $("copy").addEventListener("click", async () => {
+    if (!lastAnswer) { toast("There is no answer to copy yet.", "error"); return; }
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(lastAnswer);
+      toast("Answer copied.", "success");
+    } catch (error) {
+      toast("Copy is unavailable in this browser. Use Download answer instead.", "error");
+    }
+  });
+  $("dl-transcript").addEventListener("click", () => lastTranscript ? download(lastTranscript, "muta-transcript.txt") : toast("There is no transcript to download yet.", "error"));
+  $("dl-answer").addEventListener("click", () => lastAnswer ? download(lastAnswer, "muta-answer.txt") : toast("There is no answer to download yet.", "error"));
 
-  $("mic").onclick = () => (recorder && recorder.state === "recording") ? stop() : start();
+  $("mic").addEventListener("click", () => {
+    if (appState === "recording" && recorder && recorder.state === "recording") stopRecording();
+    else if (!$("mic").disabled) startRecording();
+  });
 })();
