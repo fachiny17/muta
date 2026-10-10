@@ -5,8 +5,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-# Languages the N-ATLAS ASR models cover. Whether each one actually works is
-# determined at runtime by the gateway; failures are reported honestly.
+
 LANGS = {"en": "Nigerian English", "ig": "Igbo", "ha": "Hausa", "yo": "Yoruba"}
 
 
