@@ -368,6 +368,59 @@ def upload_course_document(course_id):
 
     return jsonify(ok=True, message="Notes uploaded and saved.", filename=filename)
 
+@bp.get("/api/courses/<int:course_id>/documents")
+def list_course_documents(course_id):
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the page and try again."), 403
+
+    documents = course_memory.list_documents(uid, course_id)
+    if documents is None:
+        return _course_not_found()
+
+    return jsonify(ok=True, documents=documents)
+
+
+@bp.delete("/api/courses/<int:course_id>/documents/<int:document_id>")
+def delete_course_document(course_id, document_id):
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the page and try again."), 403
+
+    course = course_memory.get_course(uid, course_id)
+    if not course:
+        return _course_not_found()
+
+    deleted = course_memory.delete_document(uid, course_id, document_id)
+    if not deleted:
+        return jsonify(ok=False, message="Document not found."), 404
+
+    course_memory.record_event(
+        uid, course_id, "document_deleted", language=course["language"]
+    )
+
+    return jsonify(ok=True, message="Document deleted.")
+
+
+@bp.delete("/api/courses/<int:course_id>")
+def delete_student_course(course_id):
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the page and try again."), 403
+
+    course = course_memory.get_course(uid, course_id)
+    if not course:
+        return _course_not_found()
+
+    deleted = course_memory.delete_course(uid, course_id)
+    if not deleted:
+        return _course_not_found()
+
+    course_memory.record_event(
+        uid, course_id, "course_deleted", language=course["language"]
+    )
+
+    return jsonify(ok=True, message="Course and its notes deleted.")
 
 @bp.post("/api/courses/<int:course_id>/ask")
 def ask_course_question(course_id):
