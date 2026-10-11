@@ -210,10 +210,21 @@ def feedback():
 def dashboard():
     if not _dashboard_allowed():
         return redirect(url_for("web.login"))
-    live, snap = db.stats(), _load_snapshot()
-    return render_template("dashboard.html", s=live, snap=snap, in_sync=bool(snap) and snap.get("stats") == live,
-                           langs=current_app.config["LANG_OPTIONS"], key=request.args.get("key", ""), is_admin=_is_admin())
 
+    live = db.stats()
+    cm = course_memory.stats()
+    snap = _load_snapshot()
+
+    return render_template(
+        "dashboard.html",
+        s=live,
+        cm=cm,
+        snap=snap,
+        in_sync=bool(snap) and snap.get("stats") == live,
+        langs=current_app.config["LANG_OPTIONS"],
+        key=request.args.get("key", ""),
+        is_admin=_is_admin(),
+    )
 
 @bp.get("/api/stats")
 def api_stats():
@@ -313,6 +324,11 @@ def create_student_course():
         return jsonify(ok=False, message="Choose a supported language."), 400
 
     course = course_memory.create_course(uid, name, language)
+    
+    course_memory.record_event(
+        uid, course["id"], "course_created", language=language
+    )
+    
     return jsonify(ok=True, course=course)
 
 
@@ -344,6 +360,11 @@ def upload_course_document(course_id):
     saved = course_memory.add_document(uid, course_id, filename, text)
     if not saved:
         return _course_not_found()
+
+    course_memory.record_event(
+        uid, course_id, "document_uploaded",
+        language=course_memory.get_course(uid, course_id)["language"],
+    )
 
     return jsonify(ok=True, message="Notes uploaded and saved.", filename=filename)
 
@@ -396,6 +417,8 @@ def ask_course_question(course_id):
         },
     ]
 
+    started = time.perf_counter()
+
     try:
         answer = natlas_client.chat(
             messages,
@@ -404,6 +427,12 @@ def ask_course_question(course_id):
         ).strip()
     except GatewayError:
         current_app.logger.exception("Course Memory request to N-ATLAS failed")
+        course_memory.record_event(
+            uid, course_id, "course_question",
+            success=False,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+            language=course["language"],
+        )
         return jsonify(
             ok=False,
             message="N-ATLAS is not responding. Check that the model gateway is running.",
@@ -411,6 +440,13 @@ def ask_course_question(course_id):
 
     if not answer:
         return jsonify(ok=False, message="Muta could not generate an answer. Try again."), 502
+
+    course_memory.record_event(
+        uid, course_id, "course_question",
+        success=True,
+        duration_ms=round((time.perf_counter() - started) * 1000),
+        language=course["language"],
+    )
 
     return jsonify(ok=True, answer=answer)
 
@@ -450,6 +486,8 @@ def create_speakback_question(course_id):
         },
     ]
 
+    started = time.perf_counter()
+    
     try:
         question = natlas_client.chat(
             messages,
@@ -458,6 +496,12 @@ def create_speakback_question(course_id):
         ).strip()
     except GatewayError:
         current_app.logger.exception("SpeakBack question generation failed")
+        course_memory.record_event(
+            uid, course_id, "speakback_question",
+            success=False,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+            language=course["language"],
+        )
         return jsonify(
             ok=False,
             message="N-ATLAS is not responding. Check the model gateway.",
@@ -471,6 +515,13 @@ def create_speakback_question(course_id):
         course_id,
         question,
         context,
+    )
+
+    course_memory.record_event(
+        uid, course_id, "speakback_question",
+        success=True,
+        duration_ms=round((time.perf_counter() - started) * 1000),
+        language=course["language"],
     )
 
     return jsonify(ok=True, quiz_id=quiz_id, question=question)
@@ -493,7 +544,9 @@ def submit_speakback_answer(course_id):
             ok=False,
             message="Question not found. Generate a new SpeakBack question.",
         ), 400
-
+        
+    started = time.perf_counter()
+    
     uploaded = request.files.get("audio")
     if not uploaded:
         return jsonify(ok=False, message="No recording was received."), 400
@@ -557,6 +610,13 @@ def submit_speakback_answer(course_id):
                 message="The answer was transcribed, but feedback could not be generated.",
             ), 502
 
+        course_memory.record_event(
+            uid, course_id, "speakback_answer",
+            success=True,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+            language=course["language"],
+        )
+
         return jsonify(
             ok=True,
             transcript=transcript,
@@ -575,6 +635,12 @@ def submit_speakback_answer(course_id):
         ), 400
     except GatewayError:
         current_app.logger.exception("SpeakBack N-ATLAS request failed")
+        course_memory.record_event(
+            uid, course_id, "speakback_answer",
+            success=False,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+            language=course["language"],
+        )
         return jsonify(
             ok=False,
             message="N-ATLAS is not responding. Check the model gateway.",
