@@ -1,12 +1,42 @@
+<div align="center">
+
+<img src="https://img.shields.io/badge/Muta-Your%20Academic Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="NexLearn"/>
+
 # Muta
 
-A voice-first academic assistant for Nigerian students, built on **N-ATLAS** (NAIC 2026, PS2: Voice-First Access).
+**A voice-first academic assistant for Nigerian students.**
 
-A student speaks a question in Nigerian English, Hausa, Yoruba, or Igbo. N-ATLAS transcribes the audio and generates an academic answer. The student can rate the response and indicate whether it was helpful, while interactions are logged for a validation dashboard.
+<br/>
 
-**Start here:** `docs/WEB_GUIDE.md` — the complete learn-as-you-build guide, from your laptop to a live Render link.
+[![YouTube Demo](https://img.shields.io/badge/▶%20YouTube-Watch%20Demo-FF0000?style=for-the-badge&logo=youtube)](#)
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-View%20on%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://muta-rpnz.onrender.com)
 
-**What changed and why:** `CHANGES.md`.
+
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Getting Started](#getting-started)
+- [Project Map](#project-map)
+- [API Endpoints](#api-endpoints)
+- [Privacy and Security](#privacy-and-security)
+- [Testing and Evaluation](#testing-and-evaluation)
+- [Environment Variables](#environment-variables)
+- [Known Limitations](#known-limitations)
+- [Documentation](#documentation)
+
+---
+
+## Overview
+
+**A voice-first academic assistant for Nigerian students.**
+
+Muta lets students ask academic questions and request lesson summaries by voice. It supports manually selected Nigerian English, Hausa, Yoruba, and Igbo, and uses the N-ATLAS gateway for speech recognition and AI responses.
+
+**Live demo:** <https://muta-rpnz.onrender.com> (hosted on a free plan, so the first load after idle can take about a minute; real answers need the N-ATLAS notebook to be running)
+
 
 ## Features
 
@@ -19,23 +49,33 @@ A student speaks a question in Nigerian English, Hausa, Yoruba, or Igbo. N-ATLAS
 - Optional WhatsApp integration, disabled by default.
 - Local mock gateway for development without a GPU.
 
-## Architecture
+## How it works
 
-```text
-Browser (static/js/tutor.js, templates/index.html)  --- microphone recording --->  Flask app (app/routes.py)
-                                                                                         |
-                                                                       shared pipeline (app/pipeline.py)
-                                              audio.py: ffmpeg -> 16 kHz mono, chunks <= 28 s
-                                                                                         |  HTTPS + x-api-key
-                                                               N-ATLAS GATEWAY (gateway/gateway.py on a Colab/Kaggle GPU)
-                                                 /v1/asr -> N-ATLAS ASR (4 models)     /v1/chat -> N-ATLAS LLM (NCAIR1/N-ATLaS, 4-bit)
-                                                                                         |
-                                  answer -> rating + "did it help?" -> SQLite -> /dashboard, /export.csv, /evidence
+![How Muta works: a student's voice goes to the Flask web app, which prepares the audio and calls the N-ATLAS gateway for speech recognition and for the answer; the interaction is saved to SQLite and feeds the dashboard and evidence page](assets/how-it-works.png)
+
+<details>
+<summary><b>Text version of the diagram</b></summary>
+
+```
+ Modes:  [Ask a question]  record up to 60 s -> a short academic answer
+         [Summarize a lesson]  record up to 3 min -> a bullet-point summary
+
+ 1  Student picks a language and a mode, then records by voice (phone or laptop browser)
+ 2  Muta web app (Flask) prepares the audio ... ffmpeg: 16 kHz mono, chunks of up to 28 seconds
+ 3  N-ATLAS ASR ............................... voice -> transcript            [N-ATLAS gateway]
+ 4  Muta web app builds the prompt ............ Ask: tutor prompt | Summarize: summary prompt
+ 5  N-ATLAS LLM ............................... academic answer or summary     [N-ATLAS gateway]
+ 6  Muta web app saves and replies ............ interaction (with its mode) stored in SQLite
+ 7  Student reads, copies or downloads the text, then answers the 2-question survey
+ 8  Team dashboard + public evidence page ..... both read the same database
+
+ Development only: scripts/mock_gateway.py can stand in for steps 3 and 5
+ (labelled fake text, no real inference).
 ```
 
-The Flask application does not load the AI models directly. It sends authenticated requests to the N-ATLAS gateway, which handles speech recognition and language model inference.
+</details>
 
-The mock gateway is a development substitute for the real model service. It does not run actual N-ATLAS inference.
+The Flask app and N-ATLAS models run as separate services. The mock gateway is only for testing the application flow; it does not run real N-ATLAS inference.
 
 ## Getting Started
 
@@ -197,61 +237,46 @@ This checks the running application according to the smoke-test script's impleme
 
 If a command fails, review the error message and verify that the referenced file and required configuration exist.
 
-## Connecting to Real N-ATLAS Models
+## Run with real N-ATLAS
 
 Real speech recognition and language model inference require a reachable GPU-hosted gateway with the required models and dependencies.
 
-Start with these guides if they are present in the repository:
+1. Open the project's N-ATLAS notebook (Google Colab, GPU runtime) and run its cells in order until the gateway is started. Add these Colab Secrets with notebook access ON: `HF_TOKEN`, `GATEWAY_KEY`, and, to let the hosted app find the gateway automatically, `APP_URL` and `ADMIN_KEY`. Details: [`docs/REAL_NATLAS_COLAB.md`](docs/REAL_NATLAS_COLAB.md).
+2. Keep the notebook runtime active while using Muta. **If the notebook stops or disconnects, N-ATLAS goes offline and real inference will not work.**
+3. For local runs, set `GATEWAY_URL` in `.env` to the active gateway URL and `GATEWAY_KEY` to the matching gateway key. (On the hosted app the notebook re-registers its URL every minute, so nothing needs editing there.)
+4. Start or restart the web app with `python run.py`.
+5. To check the gateway, run `python -m scripts.test_gateway` from the project environment.
 
-- `docs/REAL_NATLAS_COLAB.md` — real N-ATLAS gateway setup.
-- `docs/WEB_GUIDE.md` — application setup and walkthrough.
-- `docs/FREE_HOSTING.md` — free hosting guidance.
-- `docs/DEPLOY_RENDER.md` — Render deployment guidance.
-
-The web application and GPU gateway are separate services. Running Flask locally does not automatically start the real AI models.
+The Flask app does not start the AI models itself. The notebook and the web app must both be running for real model-powered requests to work.
 
 ## Project Map
 
 | Path | Purpose |
 |---|---|
-| `run.py` | Application entry point. |
-| `app/__init__.py` | Application factory, configuration, database setup, and service wiring. |
-| `app/routes.py` | Web pages, JSON APIs, dashboard, evidence, and administrative routes. |
-| `app/pipeline.py` | Shared processing pipeline: transcription, response generation, logging, and feedback. |
-| `app/natlas_client.py` | Client responsible for communicating with the gateway. |
-| `app/audio.py` | Audio conversion and chunking. |
-| `app/prompts.py` | Prompts for tutoring and lesson summaries. |
-| `app/db.py` | SQLite schema, interaction logs, statistics, and CSV export. |
-| `gateway/gateway.py` | Gateway for running N-ATLAS models on a GPU host. |
-| `templates/` | HTML templates, including the main interface. |
-| `static/` | Frontend assets, including JavaScript and styles. |
-| `scripts/` | Mock gateway, smoke tests, evaluation tools, and reporting utilities. |
-| `tests/` | Automated tests. |
-| `docs/` | Setup guides, architecture notes, and deployment documentation. |
-| `data/` | Project data and related resources. |
-| `eval/` | Evaluation resources. |
-| `notebook/` | Notebook-based experimentation and analysis. |
-| `requirements.txt` | Application dependencies. |
-| `requirements-dev.txt` | Development and testing dependencies. |
-| `CHANGES.md` | Project change notes. |
-| `render.yaml` | Render deployment blueprint. |
-| `app/whatsapp.py` | Optional WhatsApp integration; paused and disabled by default. |
+| `run.py` | Starts the Flask application. |
+| `app/routes.py` | Web pages, APIs, dashboard, and exports. |
+| `app/pipeline.py` | Coordinates audio transcription, response generation, and feedback. |
+| `app/natlas_client.py` | Communicates with the N-ATLAS gateway. |
+| `app/audio.py` | Prepares and chunks audio. |
+| `app/db.py` | SQLite records and metrics. |
+| `gateway/gateway.py` | N-ATLAS model gateway service. |
+| `scripts/` and `tests/` | Development tools and automated tests. |
+| `templates/` and `static/` | Web interface and frontend assets. |
+| `notebook/` | Notebook-based experimentation, when included. |
+| `docs/` | Setup, architecture, and deployment guides. |
 
-Descriptions should be checked against the current repository before publishing.
 
 ## API Endpoints
 
-The application documentation identifies routes for question submission, feedback, dashboard access, exports, and evidence.
-
-| Endpoint | Purpose |
-|---|---|
-| `/api/ask` | Submit a question for processing. |
-| `/api/feedback` | Submit feedback for an interaction. |
-| `/dashboard` | View dashboard information. |
-| `/export.csv` | Export available metrics. |
-| `/evidence` | Access evidence-related information. |
-
-Consult `app/routes.py` for the current endpoint definitions, HTTP methods, request formats, and authentication requirements.
+| Endpoint | Access | Purpose |
+|---|---|---|
+| `POST /api/ask` | Public | Submit an audio question or lesson-summary request. |
+| `POST /api/feedback` | Public (own interactions only) | Submit the survey answers. |
+| `GET /health`, `GET /healthz` | Public | Gateway status and a cheap liveness check. |
+| `/evidence` | Public | Frozen pilot results (appears after you publish a snapshot). |
+| `/login`, `/logout` | Team | Team password login. |
+| `/dashboard`, `/export.csv` | Team login | Live statistics and metrics export. |
+| `/admin/backup.sqlite`, `/internal/gateway` | Admin key or team login | Database backup; gateway URL registration. |
 
 ## Privacy and Security
 
@@ -292,3 +317,11 @@ Consult the relevant scripts and documentation for their arguments and requireme
 - Free hosting services may sleep or have ephemeral storage.
 - Data stored on an ephemeral filesystem may not survive restarts or redeployments.
 - Mock responses do not represent real N-ATLAS inference quality.
+
+## Documentation
+
+- [`docs/WEB_GUIDE.md`](docs/WEB_GUIDE.md) — application walkthrough.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system design.
+- [`docs/REAL_NATLAS_COLAB.md`](docs/REAL_NATLAS_COLAB.md) — running the real N-ATLAS gateway on Colab.
+- [`docs/FREE_HOSTING.md`](docs/FREE_HOSTING.md) — free hosting plan (Render Free).
+- [`docs/DEPLOY_RENDER.md`](docs/DEPLOY_RENDER.md) — paid Render option (persistent disk).
