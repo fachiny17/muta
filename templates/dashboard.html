@@ -35,6 +35,57 @@
     <h2 class="section-title">Live data on this server</h2>
     {{ metrics(s, langs) }}
 
+    <h2 class="section-title">Course Memory &amp; SpeakBack</h2>
+      
+    <div class="grid" aria-label="Course Memory metrics">
+      <div class="metric">
+        <b>{{ cm.courses }}</b>
+        <span>Courses currently stored</span>
+      </div>
+    
+      <div class="metric">
+        <b>{{ cm.course_users }}</b>
+        <span>Anonymous users with courses</span>
+      </div>
+    
+      <div class="metric">
+        <b>{{ cm.documents }}</b>
+        <span>Documents currently stored</span>
+      </div>
+    
+      <div class="metric">
+        <b>{{ cm.course_questions }}</b>
+        <span>Course questions processed</span>
+      </div>
+    
+      <div class="metric">
+        <b>{{ cm.speakback_questions }}</b>
+        <span>SpeakBack questions generated</span>
+      </div>
+    
+      <div class="metric">
+        <b>{{ cm.speakback_answers }}</b>
+        <span>SpeakBack answers checked</span>
+      </div>
+    
+      <div class="metric">
+        <b>{{ cm.failed_events }}</b>
+        <span>Recorded model-operation failures</span>
+      </div>
+    
+      <div class="metric">
+        <b>{{ cm.avg_latency_ms if cm.avg_latency_ms is not none else 'n/a' }}</b>
+        <span>Average successful Course Memory operation time (ms)</span>
+      </div>
+    </div>
+    
+    <p class="hint">
+      Course Memory metrics are separate from the original voice-assistant
+      interactions. Course and document counts show what is currently stored;
+      activity counts reflect recorded actions, including actions involving
+      courses that may since have been deleted.
+    </p>
+
     <section class="card">
       <h2>Export and backup</h2>
       <div class="export-links"><a href="/export.csv{% if key %}?key={{ key }}{% endif %}">Download anonymized CSV</a>
