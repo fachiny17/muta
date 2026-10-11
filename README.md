@@ -1,4 +1,4 @@
-<div align="center">
+<div align="normal">
 
 <img src="https://img.shields.io/badge/Muta-Your%20Academic Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="NexLearn"/>
 
