@@ -111,6 +111,22 @@
           <button class="btn btn-primary" type="submit">Upload notes</button>
         </form>
 
+        <h3 class="cm-subheading">Uploaded documents</h3>
+        <div id="document-list" class="document-list" aria-live="polite">
+          <p class="hint">Select a course to view its documents.</p>
+        </div>
+        
+        <div class="cm-danger-zone">
+          <h3>Delete course</h3>
+          <p class="hint">
+            This permanently deletes the selected course, its uploaded notes
+            and its saved SpeakBack questions from the current database.
+          </p>
+          <button class="btn btn-danger" id="delete-course" type="button">
+            Delete this course
+          </button>
+        </div>
+
         <hr class="cm-divider">
 
         <h2>2. Ask your notes</h2>
