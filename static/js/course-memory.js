@@ -64,15 +64,23 @@
       const selected = activeCourse && activeCourse.id === course.id;
 
       return `
-        <button type="button"
-                class="course-item ${selected ? "active" : ""}"
-                data-course-id="${Number(course.id)}">
-          <strong>${escapeHTML(course.name)}</strong>
-          <small>
-            ${escapeHTML(course.language.toUpperCase())}
-            · ${Number(course.document_count)} document(s)
-          </small>
-        </button>
+        <div class="course-row">
+          <button type="button"
+                  class="course-select ${selected ? "active" : ""}"
+                  data-select-course="${Number(course.id)}">
+            <strong>${escapeHTML(course.name)}</strong>
+            <small>
+              ${escapeHTML(course.language.toUpperCase())}
+              · ${Number(course.document_count)} document(s)
+            </small>
+          </button>
+
+          <button type="button"
+                  class="btn btn-danger btn-small"
+                  data-delete-course="${Number(course.id)}">
+            Delete
+          </button>
+        </div>
       `;
     }).join("");
   }
@@ -115,13 +123,145 @@
     quizId = null;
 
     setStatus(`Selected ${activeCourse.name}. Upload notes or start studying.`);
+    loadDocuments();
   }
 
-  courseList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-course-id]");
-    if (!button) return;
+  async function loadDocuments() {
+    const documentList = $("#document-list");
+  
+    if (!activeCourse) {
+      documentList.innerHTML =
+        '<p class="hint">Select a course to view its documents.</p>';
+      return;
+    }
+  
+    try {
+      const data = await api(
+        `/api/courses/${activeCourse.id}/documents`
+      );
+    
+      if (!data.documents.length) {
+        documentList.innerHTML =
+          '<p class="hint">No documents uploaded yet.</p>';
+        return;
+      }
+    
+      documentList.innerHTML = data.documents.map((document) => `
+        <div class="document-item">
+          <div>
+            <strong>${escapeHTML(document.filename)}</strong>
+            <small>Uploaded document</small>
+          </div>
+    
+          <button type="button"
+                  class="btn btn-danger btn-small"
+                  data-delete-document="${Number(document.id)}">
+            Delete
+          </button>
+        </div>
+      `).join("");
+    } catch (error) {
+      documentList.textContent = error.message;
+    }
+  }
+  
+  $("#document-list").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-delete-document]");
+    if (!button || !activeCourse) return;
+  
+    const documentId = Number(button.dataset.deleteDocument);
+  
+    if (!window.confirm("Permanently delete this uploaded document?")) {
+      return;
+    }
+  
+    const courseId = activeCourse.id;
+  
+    try {
+      setStatus("Deleting document...");
+    
+      await api(
+        `/api/courses/${courseId}/documents/${documentId}`,
+        { method: "DELETE" }
+      );
+    
+      await refreshCourses();
+      selectCourse(courseId);
+      await loadDocuments();
+    
+      setStatus("Document deleted successfully.");
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  
+  $("#delete-course").addEventListener("click", async () => {
+    if (!activeCourse) return;
+  
+    const courseId = activeCourse.id;
+    const courseName = activeCourse.name;
+  
+    if (!window.confirm(
+      `Delete "${courseName}" and all its notes? This cannot be undone.`
+    )) {
+      return;
+    }
+  
+    try {
+      setStatus(`Deleting ${courseName}...`);
+    
+      await api(`/api/courses/${courseId}`, { method: "DELETE" });
+    
+      activeCourse = null;
+      quizId = null;
+      workspace.hidden = true;
+    
+      await refreshCourses();
+      setStatus("Course and its uploaded notes were deleted.");
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
 
-    selectCourse(Number(button.dataset.courseId));
+  courseList.addEventListener("click", async (event) => {
+    const deleteButton = event.target.closest("[data-delete-course]");
+  
+    if (deleteButton) {
+      const courseId = Number(deleteButton.dataset.deleteCourse);
+      const course = courses.find((item) => item.id === courseId);
+    
+      if (!course) return;
+    
+      const confirmed = window.confirm(
+        `Delete "${course.name}" and all its uploaded notes? This cannot be undone.`
+      );
+    
+      if (!confirmed) return;
+    
+      try {
+        setStatus(`Deleting ${course.name}...`);
+      
+        await api(`/api/courses/${courseId}`, { method: "DELETE" });
+      
+        if (activeCourse && activeCourse.id === courseId) {
+          activeCourse = null;
+          quizId = null;
+          workspace.hidden = true;
+        }
+      
+        await refreshCourses();
+        setStatus("Course and its uploaded notes were deleted.");
+      } catch (error) {
+        setStatus(error.message);
+      }
+    
+      return;
+    }
+  
+    const selectButton = event.target.closest("[data-select-course]");
+    if (!selectButton) return;
+  
+    selectCourse(Number(selectButton.dataset.selectCourse));
   });
 
   courseForm.addEventListener("submit", async (event) => {
