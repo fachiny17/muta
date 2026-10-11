@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07101d">
+  <title>Muta — Course Memory</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/course-memory.css') }}">
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <div class="header-left">
+      <a class="logo" href="{{ url_for('web.index') }}">
+        <svg class="logo-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M7 31V9h5l8 11 8-11h5v22h-5V17l-8 10-8-10v14H7Z"
+                fill="currentColor"/>
+          <path d="M7 34h26" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span class="logo-text">Muta</span>
+      </a>
+    </div>
+
+    <div class="header-right">
+      <nav class="nav" id="main-navigation" aria-label="Main navigation">
+        <a class="nav-link" href="{{ url_for('web.index') }}">Home</a>
+        <a class="nav-link" href="{{ url_for('web.courses_page') }}">Course Memory</a>
+        <a class="nav-link" href="{{ url_for('web.evidence') }}">Evidence</a>
+        <a class="nav-link" href="{{ url_for('web.dashboard') if is_admin else url_for('web.login') }}">
+          {{ 'Dashboard' if is_admin else 'Team login' }}
+        </a>
+      </nav>
+
+      <button class="icon-btn" id="theme-toggle" type="button"
+              aria-label="Toggle colour theme" aria-pressed="false">
+        ◐
+      </button>
+
+      <button class="icon-btn menu-toggle" id="menu-toggle" type="button"
+              aria-label="Open navigation menu" aria-expanded="false"
+              aria-controls="main-navigation">
+        ☰
+      </button>
+    </div>
+  </header>
+
+  <main class="main-content stack">
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">Muta learning workspace</p>
+        <h1 class="main-title">Study from your own notes.</h1>
+        <p class="subtitle">
+          Create a course, upload your lecture notes, ask questions about the
+          material, and practise explaining what you have learned aloud.
+        </p>
+      </div>
+      <span class="chip">Course Memory + SpeakBack</span>
+    </section>
+
+    <section class="card notice">
+      <h2>Before uploading</h2>
+      <p class="hint">
+        Your notes are stored by this app and are sent to the N-ATLAS model
+        when you ask questions or request feedback. Upload only material you
+        are permitted to use. This first version supports PDF and TXT files
+        containing selectable text, not scanned PDFs.
+      </p>
+    </section>
+
+    <section class="two-col course-layout">
+      <div class="card">
+        <h2>Create a course</h2>
+        <p class="hint">For example, Thermodynamics or Fluid Mechanics.</p>
+
+        <form id="course-form" class="cm-form">
+          <label class="field-label" for="course-name">Course name</label>
+          <input class="field" id="course-name" name="name" maxlength="80"
+                 placeholder="e.g. Fluid Mechanics" required>
+
+          <label class="field-label" for="course-language">Response language</label>
+          <select class="field" id="course-language" name="language" required>
+            {% for code, name in langs.items() %}
+            <option value="{{ code }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+
+          <button class="btn btn-primary" type="submit">Create course</button>
+        </form>
+
+        <hr class="cm-divider">
+
+        <h2>Your courses</h2>
+        <div id="course-list" class="course-list" aria-live="polite">
+          <p class="hint">Loading your courses...</p>
+        </div>
+      </div>
+
+      <div class="card" id="course-workspace" hidden>
+        <p class="eyebrow">Selected course</p>
+        <h2 id="selected-course-name">Course</h2>
+        <p class="hint" id="selected-course-info"></p>
+
+        <hr class="cm-divider">
+
+        <h2>1. Upload lecture notes</h2>
+        <form id="upload-form" class="cm-form">
+          <label class="field-label" for="document-file">PDF or TXT file</label>
+          <input class="field" id="document-file" name="document"
+                 type="file" accept=".pdf,.txt" required>
+          <button class="btn btn-primary" type="submit">Upload notes</button>
+        </form>
+
+        <hr class="cm-divider">
+
+        <h2>2. Ask your notes</h2>
+        <form id="ask-form" class="cm-form">
+          <label class="field-label" for="question-input">Your question</label>
+          <textarea class="field" id="question-input" rows="3" maxlength="1500"
+                    placeholder="Ask something covered in your lecture notes..."
+                    required></textarea>
+          <button class="btn btn-primary" type="submit">Ask Muta</button>
+        </form>
+
+        <div id="course-answer-box" class="cm-result" hidden>
+          <h3>Muta's answer</h3>
+          <p id="course-answer" class="cm-answer"></p>
+        </div>
+
+        <hr class="cm-divider">
+
+        <h2>3. SpeakBack oral practice</h2>
+        <p class="hint">
+          Muta will ask one question based on your notes. Answer aloud, then
+          receive feedback on your understanding.
+        </p>
+
+        <button class="btn btn-primary" id="make-question" type="button">
+          Generate oral question
+        </button>
+
+        <div id="speakback-box" class="cm-result" hidden>
+          <h3>Your question</h3>
+          <p id="speakback-question" class="cm-answer"></p>
+
+          <div class="cm-record-controls">
+            <button class="btn btn-primary" id="record-start" type="button">
+              Start recording
+            </button>
+            <button class="btn btn-secondary" id="record-stop" type="button" disabled>
+              Stop and submit answer
+            </button>
+          </div>
+
+          <p class="hint">
+            Speak clearly and keep your answer under 90 seconds.
+            Your audio is processed for transcription and then removed by the app.
+          </p>
+
+          <div id="speakback-result" class="cm-result" hidden>
+            <h3>What Muta heard</h3>
+            <p id="spoken-transcript" class="cm-answer"></p>
+            <h3>Feedback on your answer</h3>
+            <p id="spoken-feedback" class="cm-answer"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p id="cm-status" class="hint cm-status" role="status" aria-live="polite">
+      Create a course to get started.
+    </p>
+  </main>
+
+  <p class="footer-note">
+    Muta is a study assistant. Check important answers against your lecturer's notes.
+  </p>
+</div>
+
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/course-memory.js') }}"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@ from flask import Flask, jsonify, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import Config, LANGS
-from app import db, natlas_client, pipeline
+from app import db, natlas_client, pipeline, course_memory
 
 
 def create_app(overrides: dict | None = None) -> Flask:
@@ -17,6 +17,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     os.makedirs(os.path.dirname(os.path.abspath(flask_app.config["DB_PATH"])), exist_ok=True)
     db.init(flask_app.config["DB_PATH"])
+    course_memory.init(flask_app.config["DB_PATH"])
     registered = db.get_setting("gateway_url")   # set by the GPU notebook heartbeat (see /internal/gateway)
     natlas_client.configure(registered or flask_app.config["GATEWAY_URL"], flask_app.config["GATEWAY_KEY"])
     pipeline.SETTINGS["max_audio_s"] = flask_app.config["MAX_AUDIO_S"]

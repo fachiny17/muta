@@ -9,8 +9,11 @@ import time
 from flask import (Blueprint, Response, abort, current_app, jsonify, make_response, redirect,
                    render_template, request, send_file, session, url_for)
 
-from app import db, natlas_client, pipeline
+from app import db, natlas_client, pipeline,course_memory, audio
 from app.config import BASE_DIR
+
+from app.natlas_client import GatewayError
+from werkzeug.utils import secure_filename
 
 EVIDENCE_DIR = BASE_DIR / "evidence"
 
@@ -257,3 +260,331 @@ def register_gateway():
     natlas_client.configure(url, current_app.config["GATEWAY_KEY"])
     db.set_setting("gateway_url", url)
     return jsonify(ok=True)
+
+# ---------- Course Memory and SpeakBack ----------
+
+def _course_owner():
+    """Return this browser's existing anonymous ID, if available."""
+    uid = request.cookies.get("cv_uid")
+    return uid if db.valid_user_id(uid) else None
+
+
+def _course_not_found():
+    return jsonify(ok=False, message="Course not found."), 404
+
+
+@bp.get("/courses")
+def courses_page():
+    uid, is_new = _user_id()
+
+    response = make_response(render_template(
+        "courses.html",
+        langs=current_app.config["LANG_OPTIONS"],
+        is_admin=_is_admin(),
+    ))
+    return _with_cookie(response, uid, is_new)
+
+
+@bp.get("/api/courses")
+def list_student_courses():
+    uid, is_new = _user_id()
+
+    response = make_response(jsonify(
+        ok=True,
+        courses=course_memory.list_courses(uid),
+    ))
+    return _with_cookie(response, uid, is_new)
+
+
+@bp.post("/api/courses")
+def create_student_course():
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the Course Memory page and try again."), 403
+
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    language = str(data.get("language", "")).strip()
+
+    if not name or len(name) > 80:
+        return jsonify(ok=False, message="Enter a course name of 1 to 80 characters."), 400
+
+    if language not in current_app.config["LANG_OPTIONS"]:
+        return jsonify(ok=False, message="Choose a supported language."), 400
+
+    course = course_memory.create_course(uid, name, language)
+    return jsonify(ok=True, course=course)
+
+
+@bp.post("/api/courses/<int:course_id>/documents")
+def upload_course_document(course_id):
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the Course Memory page and try again."), 403
+
+    if not course_memory.get_course(uid, course_id):
+        return _course_not_found()
+
+    uploaded = request.files.get("document")
+    if not uploaded or not uploaded.filename:
+        return jsonify(ok=False, message="Choose a PDF or TXT file first."), 400
+
+    filename = secure_filename(uploaded.filename)
+    try:
+        text = course_memory.extract_document(filename, uploaded.stream)
+    except ValueError as exc:
+        return jsonify(ok=False, message=str(exc)), 400
+    except Exception:
+        current_app.logger.exception("Could not extract course document")
+        return jsonify(
+            ok=False,
+            message="Could not read this file. Check that it is a valid PDF or TXT file.",
+        ), 400
+
+    saved = course_memory.add_document(uid, course_id, filename, text)
+    if not saved:
+        return _course_not_found()
+
+    return jsonify(ok=True, message="Notes uploaded and saved.", filename=filename)
+
+
+@bp.post("/api/courses/<int:course_id>/ask")
+def ask_course_question(course_id):
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the Course Memory page and try again."), 403
+
+    course = course_memory.get_course(uid, course_id)
+    if not course:
+        return _course_not_found()
+
+    data = request.get_json(silent=True) or {}
+    question = str(data.get("question", "")).strip()
+
+    if not question or len(question) > 1500:
+        return jsonify(
+            ok=False,
+            message="Enter a question of 1 to 1,500 characters.",
+        ), 400
+
+    context = course_memory.get_context(uid, course_id, question)
+    if not context:
+        return jsonify(
+            ok=False,
+            message="Upload course notes before asking questions.",
+        ), 400
+
+    language_name = current_app.config["LANG_OPTIONS"][course["language"]]
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are Muta Course Memory, an academic assistant for Nigerian students. "
+                f"Reply only in {language_name}. Answer using only the supplied course notes. "
+                "If the notes do not contain enough information, say so clearly. "
+                "Do not invent facts or pretend that information came from the notes. "
+                "Explain clearly in under 180 words."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"COURSE NOTES:\n{context}\n\n"
+                f"STUDENT QUESTION:\n{question}"
+            ),
+        },
+    ]
+
+    try:
+        answer = natlas_client.chat(
+            messages,
+            max_tokens=350,
+            temperature=0.2,
+        ).strip()
+    except GatewayError:
+        current_app.logger.exception("Course Memory request to N-ATLAS failed")
+        return jsonify(
+            ok=False,
+            message="N-ATLAS is not responding. Check that the model gateway is running.",
+        ), 502
+
+    if not answer:
+        return jsonify(ok=False, message="Muta could not generate an answer. Try again."), 502
+
+    return jsonify(ok=True, answer=answer)
+
+
+@bp.post("/api/courses/<int:course_id>/speakback/question")
+def create_speakback_question(course_id):
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the Course Memory page and try again."), 403
+
+    course = course_memory.get_course(uid, course_id)
+    if not course:
+        return _course_not_found()
+
+    context = course_memory.get_context(uid, course_id, "", max_chars=5000)
+    if not context:
+        return jsonify(
+            ok=False,
+            message="Upload course notes before starting SpeakBack.",
+        ), 400
+
+    language_name = current_app.config["LANG_OPTIONS"][course["language"]]
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                f"You are a tutor testing a Nigerian student in {language_name}. "
+                "Use only the supplied course notes. Generate exactly ONE clear, "
+                "open-ended question that tests understanding. Do not answer it. "
+                "Do not add an introduction, a numbered list, or a marking guide."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"COURSE NOTES:\n{context}\n\nWrite one oral revision question.",
+        },
+    ]
+
+    try:
+        question = natlas_client.chat(
+            messages,
+            max_tokens=100,
+            temperature=0.2,
+        ).strip()
+    except GatewayError:
+        current_app.logger.exception("SpeakBack question generation failed")
+        return jsonify(
+            ok=False,
+            message="N-ATLAS is not responding. Check the model gateway.",
+        ), 502
+
+    if not question:
+        return jsonify(ok=False, message="Could not create a question. Try again."), 502
+
+    quiz_id = course_memory.save_quiz(
+        uid,
+        course_id,
+        question,
+        context,
+    )
+
+    return jsonify(ok=True, quiz_id=quiz_id, question=question)
+
+
+@bp.post("/api/courses/<int:course_id>/speakback/answer")
+def submit_speakback_answer(course_id):
+    uid = _course_owner()
+    if not uid:
+        return jsonify(ok=False, message="Reload the Course Memory page and try again."), 403
+
+    course = course_memory.get_course(uid, course_id)
+    if not course:
+        return _course_not_found()
+
+    quiz_id = request.form.get("quiz_id", "").strip()
+    quiz = course_memory.get_quiz(uid, course_id, quiz_id)
+    if not quiz:
+        return jsonify(
+            ok=False,
+            message="Question not found. Generate a new SpeakBack question.",
+        ), 400
+
+    uploaded = request.files.get("audio")
+    if not uploaded:
+        return jsonify(ok=False, message="No recording was received."), 400
+
+    mime = (uploaded.mimetype or "").split(";")[0]
+    suffix = SUFFIX.get(mime, ".webm")
+
+    temporary = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    temporary_path = temporary.name
+    temporary.close()
+
+    try:
+        uploaded.save(temporary_path)
+
+        # Reuse Muta's existing audio conversion and N-ATLAS transcription.
+        transcript = pipeline.transcribe(
+            temporary_path,
+            course["language"],
+            max_s=current_app.config["MAX_AUDIO_S"],
+        ).text.strip()
+
+        if not transcript:
+            return jsonify(
+                ok=False,
+                message="Muta could not hear a clear answer. Please record again.",
+            ), 400
+
+        language_name = current_app.config["LANG_OPTIONS"][course["language"]]
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    f"You are Muta, an academic tutor replying in {language_name}. "
+                    "Assess the student's spoken answer using only the supplied course notes. "
+                    "Be fair and encouraging. Focus on academic understanding, not grammar "
+                    "or accent. Give a score out of 5, explain what the student got right, "
+                    "identify any important missing point, and provide a short improved answer. "
+                    "If the notes do not support a judgement, say so."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"COURSE NOTES:\n{quiz['context']}\n\n"
+                    f"QUESTION:\n{quiz['question']}\n\n"
+                    f"STUDENT'S TRANSCRIBED ANSWER:\n{transcript}"
+                ),
+            },
+        ]
+
+        feedback = natlas_client.chat(
+            messages,
+            max_tokens=250,
+            temperature=0.2,
+        ).strip()
+
+        if not feedback:
+            return jsonify(
+                ok=False,
+                message="The answer was transcribed, but feedback could not be generated.",
+            ), 502
+
+        return jsonify(
+            ok=True,
+            transcript=transcript,
+            feedback=feedback,
+        )
+
+    except pipeline.PipelineError:
+        return jsonify(
+            ok=False,
+            message="That recording is too long. Please record a shorter answer.",
+        ), 400
+    except audio.AudioError:
+        return jsonify(
+            ok=False,
+            message="Muta could not process that recording. Try recording again.",
+        ), 400
+    except GatewayError:
+        current_app.logger.exception("SpeakBack N-ATLAS request failed")
+        return jsonify(
+            ok=False,
+            message="N-ATLAS is not responding. Check the model gateway.",
+        ), 502
+    except Exception:
+        current_app.logger.exception("Unexpected SpeakBack failure")
+        return jsonify(
+            ok=False,
+            message="Something went wrong while checking your answer. Please try again.",
+        ), 500
+    finally:
+        if os.path.exists(temporary_path):
+            os.remove(temporary_path)

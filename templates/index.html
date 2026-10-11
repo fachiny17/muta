@@ -25,6 +25,7 @@
       <span id="gw" class="chip" role="status" aria-live="polite">Checking AI server</span>
       <nav class="nav" id="main-navigation" aria-label="Main navigation">
         {% if has_evidence %}<a class="nav-link" href="{{ url_for('web.evidence') }}">Pilot evidence</a>{% endif %}
+        <a class="nav-link" href="{{ url_for('web.courses_page') }}">Course Memory</a>
         <a class="nav-link" href="{{ url_for('web.dashboard') if is_admin else url_for('web.login') }}">{{ 'Dashboard' if is_admin else 'Team login' }}</a>
       </nav>
       <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle colour theme" aria-pressed="false" title="Toggle colour theme">
