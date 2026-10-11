@@ -1,4 +1,4 @@
-<div align="normal">
+<div align="center">
 
 <img src="https://img.shields.io/badge/Muta-Your%20Academic Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="NexLearn"/>
 
@@ -11,6 +11,7 @@
 [![YouTube Demo](https://img.shields.io/badge/▶%20YouTube-Watch%20Demo-FF0000?style=for-the-badge&logo=youtube)](#)
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-View%20on%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://muta-rpnz.onrender.com)
 
+</div>
 
 
 ## Table of Contents
