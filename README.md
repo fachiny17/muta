@@ -46,6 +46,9 @@ Muta lets students ask academic questions and request lesson summaries by voice.
 - Speech recognition and academic responses through N-ATLAS.
 - Audio conversion and chunking for processing longer recordings.
 - Anonymous interaction logging and user feedback.
+- Create courses and upload PDF or TXT notes for course-specific questions.
+- Generate revision questions from course materials and submit spoken answers.
+- View uploaded documents and delete individual documents or entire courses.
 - Dashboard, CSV export, and evidence reporting.
 - Optional WhatsApp integration, disabled by default.
 - Local mock gateway for development without a GPU.
@@ -260,8 +263,9 @@ The Flask app does not start the AI models itself. The notebook and the web app 
 | `app/natlas_client.py` | Communicates with the N-ATLAS gateway. |
 | `app/audio.py` | Prepares and chunks audio. |
 | `app/db.py` | SQLite records and metrics. |
+| `app/course_memory.py` | Courses, uploaded notes, SpeakBack questions, and related metrics. |
 | `gateway/gateway.py` | N-ATLAS model gateway service. |
-| `scripts/` and `tests/` | Development tools and automated tests. |
+| `scripts/` and `tests/` | Development, evaluation, backup, and reporting utilities. |
 | `templates/` and `static/` | Web interface and frontend assets. |
 | `notebook/` | Notebook-based experimentation, when included. |
 | `docs/` | Setup, architecture, and deployment guides. |
@@ -272,6 +276,16 @@ The Flask app does not start the AI models itself. The notebook and the web app 
 | Endpoint | Access | Purpose |
 |---|---|---|
 | `POST /api/ask` | Public | Submit an audio question or lesson-summary request. |
+| `GET /api/courses` | Public | List the current user's courses. |
+| `POST /api/courses` | Public | Create a course. |
+| `POST /api/courses/<course_id>/documents` | Public | Upload course notes. |
+| `POST /api/ask` | Public | Submit an audio question or lesson-summary request. |
+| `POST /api/courses/<course_id>/documents` | Public | Upload course notes. |
+| `GET /api/courses/<course_id>/documents` | Team | List course documents. |
+| `DELETE /api/courses/<course_id>/documents/<document_id>` | Public | Delete a document. |
+| `POST /api/courses/<course_id>/ask` | Public | Ask a question using course materials. |
+| `POST /api/courses/<course_id>/speakback/question` | Public | Generate a SpeakBack question. |
+| `POST /api/courses/<course_id>/speakback/answer` | Public | Submit a spoken SpeakBack answer. |
 | `POST /api/feedback` | Public (own interactions only) | Submit the survey answers. |
 | `GET /health`, `GET /healthz` | Public | Gateway status and a cheap liveness check. |
 | `/evidence` | Public | Frozen pilot results (appears after you publish a snapshot). |
@@ -284,6 +298,8 @@ The Flask app does not start the AI models itself. The notebook and the web app 
 - Anonymous IDs use the `USR_XXXXXXXX` format.
 - The documented interaction flow does not collect names, email addresses, or phone numbers.
 - Audio recordings are intended to be deleted after processing.
+- Course notes and saved revision questions are stored in SQLite.
+- Course Memory event metrics are separate from the original voice-interaction metrics.
 - The metrics CSV does not include question text.
 - Exporting question text requires the admin key, according to the original project documentation.
 - Production secrets should be configured through environment variables.
