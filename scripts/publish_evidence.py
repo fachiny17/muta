@@ -5,7 +5,7 @@ import sys
 from datetime import datetime, timezone
 
 from app.config import BASE_DIR, Config
-from app import db
+from app import db, course_memory
 
 db.init(Config.DB_PATH)
 stats = db.stats()
@@ -19,8 +19,13 @@ ev = json.loads(ev_path.read_text(encoding="utf-8")) if ev_path.exists() else No
 
 out = BASE_DIR / "evidence"
 out.mkdir(exist_ok=True)
-snapshot = {"generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "database": str(Config.DB_PATH), "stats": stats, "eval": ev}
+snapshot = {
+    "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    "database": str(Config.DB_PATH),
+    "stats": stats,
+    "course_memory": course_memory.stats(),
+    "eval": ev,
+}
 (out / "snapshot.json").write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
 (out / "validation.csv").write_text(db.export_csv(include_text=False), encoding="utf-8")
 
