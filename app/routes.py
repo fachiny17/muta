@@ -592,11 +592,14 @@ def submit_speakback_answer(course_id):
 
     quiz_id = request.form.get("quiz_id", "").strip()
     quiz = course_memory.get_quiz(uid, course_id, quiz_id)
+
     if not quiz:
-        return jsonify(
-            ok=False,
-            message="Question not found. Generate a new SpeakBack question.",
-        ), 400
+        current_app.logger.warning(
+            "SpeakBack lookup failed: quiz_id_present=%s, "
+            "course_id=%s",
+            bool(quiz_id),
+            course_id,
+        )
         
     started = time.perf_counter()
     
