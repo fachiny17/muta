@@ -61,20 +61,53 @@ Muta lets students ask academic questions and request lesson summaries by voice.
 <summary><b>Text version of the diagram</b></summary>
 
 ```
- Modes:  [Ask a question]  record up to 60 s -> a short academic answer
-         [Summarize a lesson]  record up to 3 min -> a bullet-point summary
+Modes:  [Ask a question]  record up to 60 s -> a short academic answer
+        [Summarize a lesson]  record up to 3 min -> a bullet-point summary
+        [Course Memory]
 
- 1  Student picks a language and a mode, then records by voice (phone or laptop browser)
- 2  Muta web app (Flask) prepares the audio ... ffmpeg: 16 kHz mono, chunks of up to 28 seconds
- 3  N-ATLAS ASR ............................... voice -> transcript            [N-ATLAS gateway]
- 4  Muta web app builds the prompt ............ Ask: tutor prompt | Summarize: summary prompt
- 5  N-ATLAS LLM ............................... academic answer or summary     [N-ATLAS gateway]
- 6  Muta web app saves and replies ............ interaction (with its mode) stored in SQLite
- 7  Student reads, copies or downloads the text, then answers the 2-question survey
- 8  Team dashboard + public evidence page ..... both read the same database
+1  Student selects a language (Nigerian English, Hausa, Yoruba, or Igbo) and a mode, then records by voice using a phone or laptop browser.
 
- Development only: scripts/mock_gateway.py can stand in for steps 3 and 5
- (labelled fake text, no real inference).
+2  Muta web app (Flask) prepares the audio ... FFmpeg: 16 kHz mono, chunks of up to 28 seconds.
+
+3  N-ATLAS ASR ............................... voice -> transcript            [N-ATLAS gateway]
+
+4  Muta web app builds the prompt ............ Transcript + selected mode:
+                                               Ask: tutor prompt
+                                               Summarize: summary prompt
+                                               Course questions: may also use uploaded course notes.
+
+5  N-ATLAS LLM ............................... generates an academic answer,
+                                               bullet-point summary, or
+                                               course-based response/revision question
+                                               [N-ATLAS gateway]
+
+6  Muta web app saves and replies ............ interaction metadata and mode
+                                               stored in SQLite; result returned
+                                               to the student.
+
+7  Student reads, copies or downloads the result, then answers a two-question
+   feedback survey about usefulness and helpfulness.
+
+8  Team dashboard and public evidence page ... dashboard, CSV export, and
+                                               published evidence reporting use
+                                               stored interaction records.
+
+Course Memory:
+   Create courses, upload PDF/TXT notes, ask course-specific questions,
+   generate revision questions, submit spoken SpeakBack answers, and view
+   or delete uploaded documents and courses.
+
+Development only: scripts/mock_gateway.py can stand in for steps 3 and 5.
+It returns clearly labelled fake text and performs no real AI inference.
+
+Architecture note: The Flask web app and N-ATLAS models run as separate
+services. Real AI responses require the GPU-hosted N-ATLAS gateway to be
+running and reachable.
+
+Privacy note: Interactions use anonymous IDs. Audio recordings are intended
+to be deleted after processing. Course notes and saved revision questions
+are stored in SQLite. Review the current implementation and deployment
+settings before using real student data.
 ```
 
 </details>
