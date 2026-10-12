@@ -77,8 +77,22 @@
 
           <button type="button"
                   class="btn btn-danger btn-small"
-                  data-delete-course="${Number(course.id)}">
-            Delete
+                  data-delete-course="${Number(course.id)}"
+                  aria-label="Delete course: ${escapeHTML(course.name)}">
+            <svg viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="1.8"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 aria-hidden="true">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4h8v2"/>
+              <path d="m19 6-1 14H6L5 6"/>
+              <path d="M10 10v6"/>
+              <path d="M14 10v6"/>
+            </svg>
+            <span>Delete</span>
           </button>
         </div>
       `;
@@ -128,35 +142,49 @@
 
   async function loadDocuments() {
     const documentList = $("#document-list");
-  
+
     if (!activeCourse) {
       documentList.innerHTML =
         '<p class="hint">Select a course to view its documents.</p>';
       return;
     }
-  
+
     try {
       const data = await api(
         `/api/courses/${activeCourse.id}/documents`
       );
-    
+
       if (!data.documents.length) {
         documentList.innerHTML =
           '<p class="hint">No documents uploaded yet.</p>';
         return;
       }
-    
+
       documentList.innerHTML = data.documents.map((document) => `
         <div class="document-item">
           <div>
             <strong>${escapeHTML(document.filename)}</strong>
             <small>Uploaded document</small>
           </div>
-    
+
           <button type="button"
                   class="btn btn-danger btn-small"
-                  data-delete-document="${Number(document.id)}">
-            Delete
+                  data-delete-document="${Number(document.id)}"
+                  aria-label="Delete document: ${escapeHTML(document.filename)}">
+            <svg viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="1.8"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 aria-hidden="true">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4h8v2"/>
+              <path d="m19 6-1 14H6L5 6"/>
+              <path d="M10 10v6"/>
+              <path d="M14 10v6"/>
+            </svg>
+            <span>Delete</span>
           </button>
         </div>
       `).join("");
@@ -164,58 +192,58 @@
       documentList.textContent = error.message;
     }
   }
-  
+
   $("#document-list").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-delete-document]");
     if (!button || !activeCourse) return;
-  
+
     const documentId = Number(button.dataset.deleteDocument);
-  
+
     if (!window.confirm("Permanently delete this uploaded document?")) {
       return;
     }
-  
+
     const courseId = activeCourse.id;
-  
+
     try {
       setStatus("Deleting document...");
-    
+
       await api(
         `/api/courses/${courseId}/documents/${documentId}`,
         { method: "DELETE" }
       );
-    
+
       await refreshCourses();
       selectCourse(courseId);
       await loadDocuments();
-    
+
       setStatus("Document deleted successfully.");
     } catch (error) {
       setStatus(error.message);
     }
   });
-  
+
   $("#delete-course").addEventListener("click", async () => {
     if (!activeCourse) return;
-  
+
     const courseId = activeCourse.id;
     const courseName = activeCourse.name;
-  
+
     if (!window.confirm(
       `Delete "${courseName}" and all its notes? This cannot be undone.`
     )) {
       return;
     }
-  
+
     try {
       setStatus(`Deleting ${courseName}...`);
-    
+
       await api(`/api/courses/${courseId}`, { method: "DELETE" });
-    
+
       activeCourse = null;
       quizId = null;
       workspace.hidden = true;
-    
+
       await refreshCourses();
       setStatus("Course and its uploaded notes were deleted.");
     } catch (error) {

@@ -115,15 +115,30 @@
         <div id="document-list" class="document-list" aria-live="polite">
           <p class="hint">Select a course to view its documents.</p>
         </div>
-        
+
         <div class="cm-danger-zone">
           <h3>Delete course</h3>
           <p class="hint">
             This permanently deletes the selected course, its uploaded notes
             and its saved SpeakBack questions from the current database.
           </p>
-          <button class="btn btn-danger" id="delete-course" type="button">
-            Delete this course
+          <button class="btn btn-danger"
+                  id="delete-course"
+                  type="button">
+            <svg viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="1.8"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 aria-hidden="true">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4h8v2"/>
+              <path d="m19 6-1 14H6L5 6"/>
+              <path d="M10 10v6"/>
+              <path d="M14 10v6"/>
+            </svg>
+            <span>Delete this course</span>
           </button>
         </div>
 

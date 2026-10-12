@@ -165,19 +165,151 @@
   border-top: 1px solid var(--border-color);
 }
 
+/* =========================================================
+   COURSE MEMORY — DESTRUCTIVE ACTION BUTTONS
+   ========================================================= */
+
 .btn-danger {
-  color: #fff;
-  background: #a82e39;
-  border: 1px solid #a82e39;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 42px;
+  padding: 10px 15px;
+
+  border: 1px solid #e45c6b;
+  border-radius: 12px;
+
+  color: #ffb5bd;
+  background: rgba(190, 40, 58, 0.13);
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
-.btn-danger:hover {
-  background: #8d2530;
+.btn-danger:hover:not(:disabled) {
+  color: #ffffff;
+  background: #b52f43;
+  border-color: #d8495d;
+
+  box-shadow: 0 5px 16px rgba(181, 47, 67, 0.20);
+
+  transform: translateY(-1px);
 }
+
+.btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.btn-danger:focus-visible {
+  outline: 3px solid #ef8793;
+  outline-offset: 3px;
+}
+
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Small Delete buttons beside courses and documents */
 
 .btn-small {
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 8px 12px;
+
+  border-radius: 11px;
+
   font-size: 12px;
+  font-weight: 750;
+}
+
+/* Consistent trash icon */
+
+.btn-danger svg {
+  width: 16px;
+  height: 16px;
+
+  flex: 0 0 auto;
+}
+
+/* The main Delete Course action */
+
+#delete-course {
+  min-height: 46px;
+  padding: 12px 17px;
+
+  border-radius: 13px;
+  font-size: 13px;
+}
+
+/* Improve separation of destructive actions */
+
+.cm-danger-zone {
+  margin-top: 26px;
+  padding: 22px;
+
+  border: 1px solid rgba(228, 92, 107, 0.27);
+  border-radius: 17px;
+
+  background: rgba(190, 40, 58, 0.055);
+}
+
+.cm-danger-zone h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.cm-danger-zone p {
+  line-height: 1.7;
+}
+
+/* Light-theme support */
+
+body.light-theme .btn-danger {
+  color: #a32136;
+  background: #fff0f2;
+  border-color: #e5a2ab;
+}
+
+body.light-theme .btn-danger:hover:not(:disabled) {
+  color: #ffffff;
+  background: #b52f43;
+  border-color: #b52f43;
+}
+
+body.light-theme .cm-danger-zone {
+  border-color: #f0c4ca;
+  background: #fff8f8;
+}
+
+/* Mobile usability */
+
+@media (max-width: 480px) {
+  .course-row .btn,
+  .document-item .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  #delete-course {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
