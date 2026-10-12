@@ -288,6 +288,9 @@ def get_quiz(owner_id, course_id, quiz_id):
             """,
             (quiz_id, owner_id, course_id),
         ).fetchone()
+        
+    return dict(row) if row else None
+        
  
  #---------------- document listing and deletion ------------------#       
 def list_documents(owner_id, course_id):

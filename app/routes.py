@@ -600,6 +600,11 @@ def submit_speakback_answer(course_id):
             bool(quiz_id),
             course_id,
         )
+    
+        return jsonify(
+            ok=False,
+            message="Question not found. Generate a new SpeakBack question.",
+        ), 404
         
     started = time.perf_counter()
     
