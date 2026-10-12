@@ -8,6 +8,7 @@ from app.config import BASE_DIR, Config
 from app import db, course_memory
 
 db.init(Config.DB_PATH)
+course_memory.init(Config.DB_PATH)
 stats = db.stats()
 if stats["total_interactions"] == 0 and "--force" not in sys.argv:
     print("This database has 0 interactions, so there is nothing real to publish yet.\n"
