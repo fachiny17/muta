@@ -1,7 +1,3 @@
-"""Thin client for the N-ATLAS gateway (the GPU host that runs the real models).
-
-The local app never loads N-ATLAS itself. Everything goes through these calls.
-"""
 import time
 import httpx
 

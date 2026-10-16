@@ -1,6 +1,3 @@
-"""Check the real gateway end to end.  Usage:
-    python -m scripts.test_gateway [clip.wav lang]
-"""
 import sys
 import time
 
