@@ -51,14 +51,14 @@ def test_full_conversation(wa):
     assert post(client, Body="hi").status_code == 200
     assert "Reply with a number" in sent[-1][1]
     post(client, Body="2")                                 
-    assert "Hausa" in sent[-1][1]
+    assert "Igbo" in sent[-1][1]
     voice(client)
     assert any("Strain is deformation" in b for _, b in sent)
     post(client, Body="5")
     assert "YES or NO" in sent[-1][1]
     post(client, Body="yes")
     s = db.stats()
-    assert s["by_channel"] == {"whatsapp": 1} and s["by_language"] == {"ha": 1}
+    assert s["by_channel"] == {"whatsapp": 1} and s["by_language"] == {"ig": 1}
     assert s["avg_rating"] == 5 and s["task_completion_rate"] == 100.0
 
 
@@ -94,7 +94,7 @@ def test_language_change_and_rate_limit(wa):
     post(client, Body="language")
     assert "Reply with a number" in sent[-1][1]
     post(client, Body="3")
-    assert "Yoruba" in sent[-1][1]
+    assert "Hausa" in sent[-1][1]
     for _ in range(5):
         voice(client)
     voice(client)

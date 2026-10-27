@@ -15,7 +15,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfi
 
 LLM_ID = "NCAIR1/N-ATLaS"
 ASR_IDS = {"ha": "NCAIR1/Hausa-ASR", "yo": "NCAIR1/Yoruba-ASR",
-           "ig": "NCAIR1/Igbo-ASR", "en": "NCAIR1/NigerianAccentedEnglish"}  # verify against the model cards
+           "ig": "NCAIR1/Igbo-ASR", "en": "NCAIR1/NigerianAccentedEnglish"}
 MAX_ASR_RESIDENT = 2
 
 

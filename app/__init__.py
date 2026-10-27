@@ -22,7 +22,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     natlas_client.configure(registered or flask_app.config["GATEWAY_URL"], flask_app.config["GATEWAY_KEY"])
     pipeline.SETTINGS["max_audio_s"] = flask_app.config["MAX_AUDIO_S"]
     pipeline.SETTINGS["max_summary_audio_s"] = flask_app.config["MAX_SUMMARY_AUDIO_S"]
-    flask_app.config["LANG_OPTIONS"] = {c: LANGS[c] for c in flask_app.config["ENABLED_LANGS"]}
+    flask_app.config["LANG_OPTIONS"] = {c: LANGS[c] for c in LANGS if c in flask_app.config["ENABLED_LANGS"]}
 
     from app.routes import bp
     flask_app.register_blueprint(bp)
