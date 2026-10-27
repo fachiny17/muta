@@ -50,7 +50,7 @@ def test_full_conversation(wa):
     client, sent = wa
     assert post(client, Body="hi").status_code == 200
     assert "Reply with a number" in sent[-1][1]
-    post(client, Body="2")                                    # Hausa (menu order: en, ha, yo, ig)
+    post(client, Body="2")                                 
     assert "Hausa" in sent[-1][1]
     voice(client)
     assert any("Strain is deformation" in b for _, b in sent)
