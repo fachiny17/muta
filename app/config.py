@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
-LANGS = {"en": "Nigerian English", "ig": "Igbo", "ha": "Hausa", "yo": "Yoruba"}
+LANGS = {"en": "Nigerian English", "ha": "Hausa", "yo": "Yoruba", "ig": "Igbo"}
 
 
 class Config:
