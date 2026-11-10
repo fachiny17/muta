@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Muta-Your%20Academic Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="NexLearn"/>
+<img src="https://img.shields.io/badge/Muta-Your%20Academic Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="Muta"/>
 
 # Muta
 
@@ -138,7 +138,7 @@ git clone https://github.com/fachiny17/muta.git
 cd muta
 ```
 
-If Git is not installed, download Git for Windows from:
+You can visit the below link to download Git:
 
 https://git-scm.com/download/win
 
@@ -213,7 +213,7 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-Open `.env` in your editor and configure the required settings. The original setup instructions identify these variables:
+Open `.env` in your editor and configure the required settings:
 
 - `SECRET_KEY`
 - `DASHBOARD_KEY`
@@ -338,7 +338,7 @@ The Flask app does not start the AI models itself. The notebook and the web app 
 - Course notes and saved revision questions are stored in SQLite.
 - Course Memory event metrics are separate from the original voice-interaction metrics.
 - The metrics CSV does not include question text.
-- Exporting question text requires the admin key, according to the original project documentation.
+- Exporting question text requires the admin key.
 - Production secrets should be configured through environment variables.
 - Never commit `.env`, private credentials, or sensitive datasets.
 
