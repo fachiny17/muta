@@ -1,11 +1,3 @@
-"""OPTIONAL WhatsApp channel (Twilio). Nothing else imports this module unless
-WHATSAPP_ENABLED=1, so the web app never depends on Twilio.
-
-Flow: student voice note -> Twilio webhook (this file) -> shared pipeline -> reply via Twilio REST API.
-Twilio's webhook times out quickly and N-ATLAS can take several seconds, so the webhook returns an empty
-response at once and the real reply is sent afterwards from a background thread.
-Conversation state lives in SQLite (language, last answered interaction), not in memory.
-"""
 import base64
 import hashlib
 import hmac
@@ -22,8 +14,8 @@ from app import db, pipeline
 log = logging.getLogger("muta.whatsapp")
 bp = Blueprint("whatsapp", __name__)
 
-RUN_ASYNC = True                      # tests set this to False to run inline
-_slots = threading.Semaphore(2)       # at most 2 voice notes processed at once on this server
+RUN_ASYNC = True                      
+_slots = threading.Semaphore(2)
 MAX_MEDIA_BYTES = 5 * 1024 * 1024
 EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
 
@@ -98,7 +90,7 @@ def _process_voice(cfg: dict, to: str, uid: str, lang: str, media_url: str) -> N
     finally:
         tmp.close()
         if os.path.exists(tmp.name):
-            os.remove(tmp.name)          # raw audio is never kept
+            os.remove(tmp.name)
     if res["ok"]:
         _safe_send(cfg, to, f"{res['answer']}\n\nRate this answer 1-5 (5 = very useful).")
     else:
@@ -120,7 +112,7 @@ def webhook():
             return Response("invalid signature", status=403)
 
     ok_resp = Response(EMPTY_TWIML, mimetype="text/xml")
-    if not db.mark_seen(params.get("MessageSid", "")):      # provider retry: already handled
+    if not db.mark_seen(params.get("MessageSid", "")):
         return ok_resp
 
     sender = params.get("From", "")
@@ -128,7 +120,7 @@ def webhook():
     uid = db.user_id_from_phone(sender, cfg["SECRET_KEY"])
     db.ensure_user(uid, "whatsapp")
     user = db.get_user(uid)
-    conf = dict(cfg)                                          # plain dict for background threads
+    conf = dict(cfg)
     menu = _menu(cfg)
 
     def reply(text):
@@ -137,7 +129,7 @@ def webhook():
     # 1) language not chosen yet (or user asked to change it)
     if not user["language"] or body == "language":
         if user["language"] and body == "language":
-            db.ensure_user(uid, "whatsapp", language="")      # clear it, show menu
+            db.ensure_user(uid, "whatsapp", language="")
             reply(welcome_text(cfg))
         elif body in menu:
             lang = menu[body]

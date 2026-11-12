@@ -19,13 +19,13 @@ def _request(method: str, path: str, retries: int = 2, timeout: float = 120, **k
         try:
             r = httpx.request(method, _cfg["url"] + path, headers={"x-api-key": _cfg["key"]},
                               timeout=timeout, **kw)
-            if r.status_code in (400, 401, 403, 422):  # our fault; retrying will not help
+            if r.status_code in (400, 401, 403, 422):
                 raise GatewayError(f"gateway rejected request ({r.status_code}): {r.text[:200]}")
             r.raise_for_status()
             return r.json()
         except GatewayError:
             raise
-        except Exception as e:  # network errors, 5xx, bad JSON
+        except Exception as e: 
             last = e
             if attempt < retries:
                 time.sleep(1.5 * (attempt + 1))

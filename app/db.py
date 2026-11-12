@@ -1,4 +1,3 @@
-"""SQLite storage. Anonymous IDs only; no names, emails or phone numbers are stored."""
 import csv
 import hashlib
 import io

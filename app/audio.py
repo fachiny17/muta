@@ -1,8 +1,3 @@
-"""Audio normalisation: any input -> 16 kHz mono 16-bit WAV, split into <=28 s chunks.
-
-Uses FFmpeg for decoding and the standard library for chunking (no pydub, so it
-works on any Python version).
-"""
 import array
 import math
 import os

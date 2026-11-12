@@ -1,4 +1,3 @@
-"""Web channel + team login + validation dashboard."""
 import hmac
 import json
 import os
@@ -238,7 +237,7 @@ def export_csv():
     if not _dashboard_allowed():
         abort(403)
     include_text = request.args.get("include_text") == "1"
-    if include_text and not _admin_allowed():      # question/answer text is team-only
+    if include_text and not _admin_allowed():
         abort(403)
     body = db.export_csv(include_text=include_text)
     return Response(body, mimetype="text/csv",

@@ -1,7 +1,3 @@
-"""The shared academic pipeline. Web and WhatsApp both call handle_voice().
-
-voice -> audio normalisation -> N-ATLAS ASR -> N-ATLAS LLM -> answer -> logged
-"""
 import logging
 import shutil
 import tempfile

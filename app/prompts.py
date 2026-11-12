@@ -1,4 +1,3 @@
-"""All prompts live here. Edit this file to change tutor behaviour."""
 from app.config import LANGS
 
 
