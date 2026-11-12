@@ -271,7 +271,9 @@ def register_gateway():
     db.set_setting("gateway_url", url)
     return jsonify(ok=True)
 
-# ---------- Course Memory and SpeakBack ----------
+
+
+# ---------- Course Memory and SpeakBack feature----------
 
 def _course_owner():
     """Return this browser's existing anonymous ID, if available."""

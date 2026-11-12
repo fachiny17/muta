@@ -39,7 +39,7 @@ KEY = _secret("GATEWAY_KEY")
 state = {"tok": None, "llm": None, "llm_error": None}
 asr_cache = collections.OrderedDict()
 asr_errors = {}
-lock = threading.Lock()  # one GPU job at a time keeps memory predictable
+lock = threading.Lock()
 
 app = FastAPI(title="N-ATLAS gateway")
 
@@ -83,7 +83,7 @@ def get_asr(lang: str):
         rid = ASR_IDS[lang]
         m = WhisperForConditionalGeneration.from_pretrained(rid, torch_dtype=torch.float16).cuda().eval()
         p = WhisperProcessor.from_pretrained(rid)
-    except Exception as e:  # report honestly instead of pretending the language works
+    except Exception as e:
         asr_errors[lang] = str(e)[:300]
         raise HTTPException(503, f"ASR model for '{lang}' failed to load: {asr_errors[lang]}")
     asr_errors.pop(lang, None)
@@ -114,7 +114,7 @@ async def asr(file: UploadFile, lang: str = Form(...), x_api_key: str = Header(N
         m, p = get_asr(lang)
         feats = p(audio, sampling_rate=16000, return_tensors="pt").input_features.to("cuda", torch.float16)
         with torch.no_grad():
-            ids = m.generate(feats, max_new_tokens=220)  # if output is gibberish, follow the model card's generation settings
+            ids = m.generate(feats, max_new_tokens=220)
     return {"text": p.batch_decode(ids, skip_special_tokens=True)[0].strip()}
 
 
