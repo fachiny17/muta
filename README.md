@@ -18,6 +18,7 @@
 
 - [Overview](#overview)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [How it works](#how-it-works)
 - [Getting Started](#getting-started)
 - [Project Map](#project-map)
@@ -26,7 +27,6 @@
 - [Testing and Evaluation](#testing-and-evaluation)
 - [Environment Variables](#environment-variables)
 - [Known Limitations](#known-limitations)
-- [Documentation](#documentation)
 
 ---
 
@@ -52,6 +52,30 @@ Muta lets students ask academic questions and request lesson summaries by voice.
 - Dashboard, CSV export, and evidence reporting.
 - Optional WhatsApp integration, disabled by default.
 - Local mock gateway for development without a GPU.
+
+
+## Screenshots
+
+### Landing page
+Students choose a language and a task, and see the privacy and consent note before they start.
+
+![Muta landing page with the privacy and consent note](assets/landing.png)
+
+### Ask and summarize by voice
+Pick a response language, choose between asking a question or summarizing a lesson, then record with the microphone.
+
+![Muta study session with language selector, task picker and microphone](assets/ask-session.png)
+
+### Course Memory
+Create a course, upload PDF or TXT notes, and ask questions about them. This example shows an Igbo question answered in Igbo from the uploaded notes.
+
+![Course Memory page showing a course, document upload and an Igbo question with Muta's answer](assets/course_memory.png)
+
+### Validation dashboard
+Live, team-only statistics covering interactions, ASR and LLM success, latency, ratings, language distribution, and Course Memory and SpeakBack usage.
+
+![Validation dashboard showing interaction, latency, rating and Course Memory metrics](assets/dashboard.png)
+
 
 ## How it works
 
