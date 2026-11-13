@@ -1,8 +1,10 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Muta-Your%20Academic Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="Muta"/>
+<img src="assets/muta_logo.jpeg" alt="Muta logo" width="280"/>
 
-# Muta
+<br/><br/>
+
+<img src="https://img.shields.io/badge/Muta-Your%20Academic%20Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="Muta, Your Academic Partner"/>
 
 **A voice-first academic assistant for Nigerian students.**
 
