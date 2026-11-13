@@ -4,7 +4,8 @@
 
 <br/><br/>
 
-<img src="https://img.shields.io/badge/Muta-Your%20Academic%20Partner-00d4ff?style=for-the-badge&logo=microphone&logoColor=white" alt="Muta, Your Academic Partner"/>
+
+# Muta
 
 **A voice-first academic assistant for Nigerian students.**
 
@@ -66,7 +67,7 @@ Students choose a language and a task, and see the privacy and consent note befo
 ### Ask and summarize by voice
 Pick a response language, choose between asking a question or summarizing a lesson, then record with the microphone.
 
-![Muta study session with language selector, task picker and microphone](assets/ask-session.png)
+![Muta study session with language selector, task picker and microphone](assets/ask_session.png)
 
 ### Course Memory
 Create a course, upload PDF or TXT notes, and ask questions about them. This example shows an Igbo question answered in Igbo from the uploaded notes.
