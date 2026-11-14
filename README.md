@@ -2,7 +2,7 @@
 
 <img src="assets/muta_logo.jpeg" alt="Muta logo" width="280"/>
 
-<br/><br/>
+<br/>
 
 
 # Muta
